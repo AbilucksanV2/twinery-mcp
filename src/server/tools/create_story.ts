@@ -5,6 +5,19 @@ import { setActiveStory } from "../state.js";
 import { STORY_FORMATS, StoryFormat } from "../../twine/formats.js";
 import { needClarification, ClarificationResponse } from "../clarification.js";
 
+export const description =
+  "Initialise the single active story. Asks for the story format if omitted (no silent defaults). Auto-generates a spec-valid IFID.";
+
+export const clarificationTriggers: string[] = [
+  "format omitted: ask Harlowe | SugarCube | Chapbook | Snowman.",
+];
+
+export const example = {
+  title: "Start a Harlowe story",
+  input: { name: "Locked Door", format: "Harlowe" },
+  note: "If you omit `format`, the server will surface a clarification instead of picking a default.",
+};
+
 export const inputSchema = {
   name: z.string().min(1, "name is required").max(200),
   format: z.enum(["Harlowe", "SugarCube", "Chapbook", "Snowman"]).optional()

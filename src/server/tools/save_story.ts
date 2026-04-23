@@ -1,9 +1,22 @@
 import { z } from "zod";
 import { mkdir, writeFile } from "node:fs/promises";
-import { dirname, isAbsolute, join, resolve } from "node:path";
+import { isAbsolute, join, resolve } from "node:path";
 import { emitHtml, emitTwee } from "../../twine/adapter.js";
 import { requireActiveStory, setLastSavedDir } from "../state.js";
 import { ClarificationResponse, needClarification } from "../clarification.js";
+
+export const description =
+  "Persist the active story as <slug>.twee and <slug>.html into a directory, plus a sibling assets/<slug>/ drop zone. Asks for the output folder when omitted.";
+
+export const clarificationTriggers: string[] = [
+  "output_dir missing: ask for the destination folder (free-form).",
+];
+
+export const example = {
+  title: "Save to a subfolder of the current working directory",
+  input: { output_dir: "stories/locked-door" },
+  note: "Writes stories/locked-door/{locked-door.twee, locked-door.html} and creates stories/locked-door/assets/locked-door/.",
+};
 
 export const inputSchema = {
   output_dir: z.string().optional()

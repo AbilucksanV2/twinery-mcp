@@ -4,6 +4,13 @@ description: "Task list for Twinery MCP Server v1.0 MVP"
 
 # Tasks: Twinery MCP Server — v1.0 MVP
 
+> **POC status (2026-04-23)**: A minimum-viable POC covering a strict subset of
+> these tasks is complete. Tasks with `[X]` are done in the POC; `[~]` indicates
+> a task done in a POC-reduced form (the full v1.0 scope is broader than what
+> was built). Everything else remains unstarted. Smoke test passes (`npm run
+> smoke`) and the server responds to real MCP `initialize` + `tools/list`
+> requests over stdio. See the top of `README.md` for POC limitations.
+
 **Input**: Design documents from `/specs/001-mcp-server-mvp/`
 **Prerequisites**: plan.md, spec.md, research.md, data-model.md, contracts/, quickstart.md
 
@@ -32,15 +39,15 @@ Single-project TypeScript package. Paths below are repository-relative, matching
 
 **Purpose**: Project initialisation and basic structure
 
-- [ ] T001 Initialise npm project — create `package.json` with name `@twinery/mcp-server`, version `0.1.0`, type `module`, bin entry `twinery-mcp` → `dist/server/index.js`, and scripts (`build`, `test`, `lint`, `typecheck`, `license-check`)
-- [ ] T002 [P] Install runtime dependencies: `@modelcontextprotocol/sdk`, `extwee`, `zod`
+- [X] T001 Initialise npm project — create `package.json` with name `@twinery/mcp-server`, version `0.1.0`, type `module`, bin entry `twinery-mcp` → `dist/server/index.js`, and scripts (`build`, `test`, `lint`, `typecheck`, `license-check`)
+- [X] T002 [P] Install runtime dependencies: `@modelcontextprotocol/sdk`, `extwee`, `zod`
 - [ ] T003 [P] Install dev dependencies: `typescript`, `vitest`, `@vitest/coverage-v8`, `puppeteer`, `@types/node`, `license-checker`, `eslint`, `@typescript-eslint/*`, `prettier`
-- [ ] T004 [P] Create `LICENSE` at repo root with MIT license text
-- [ ] T005 [P] Create `tsconfig.json` (strict, ES2022 target, NodeNext module, rootDir `src`, outDir `dist`)
+- [X] T004 [P] Create `LICENSE` at repo root with MIT license text
+- [X] T005 [P] Create `tsconfig.json` (strict, ES2022 target, NodeNext module, rootDir `src`, outDir `dist`)
 - [ ] T006 [P] Create `vitest.config.ts` (node environment, include `tests/**/*.test.ts`)
 - [ ] T007 [P] Create `.eslintrc.cjs` + `.prettierrc` with TypeScript rules
-- [ ] T008 [P] Create `.gitignore` covering `node_modules/`, `dist/`, `coverage/`, `stories/`, `.DS_Store`
-- [ ] T009 [P] Create empty directory tree: `src/{server/{tools,resources},twine,graph,images,guide,lib}`, `tests/{fixtures/{harlowe,sugarcube,chapbook,snowman},contract,integration,unit}`, `scripts/{bash,powershell}`, `docs/`
+- [X] T008 [P] Create `.gitignore` covering `node_modules/`, `dist/`, `coverage/`, `stories/`, `.DS_Store`
+- [X] T009 [P] Create empty directory tree: `src/{server/{tools,resources},twine,graph,images,guide,lib}`, `tests/{fixtures/{harlowe,sugarcube,chapbook,snowman},contract,integration,unit}`, `scripts/{bash,powershell}`, `docs/`
 - [ ] T010 Create GitHub Actions CI workflow at `.github/workflows/ci.yml` — jobs: lint, typecheck, test, license-check, no-LLM-SDK-grep; matrix over ubuntu-latest, macos-latest, windows-latest; fails if any runtime dep's license is outside `MIT/BSD-2/BSD-3/Apache-2.0/ISC/MPL-2.0`; fails if any `import` references known LLM-provider SDK packages (`@anthropic-ai/sdk`, `openai`, `@google/generative-ai`, `cohere-ai`, `@mistralai/mistralai`)
 
 ---
@@ -51,15 +58,15 @@ Single-project TypeScript package. Paths below are repository-relative, matching
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T011 Implement `src/twine/formats.ts` — `StoryFormat` enum (Harlowe/SugarCube/Chapbook/Snowman), default versions map (Harlowe 3.3.8, SugarCube 2.36.1, Chapbook 2.1.0, Snowman 2.0.2), per-format link-syntax descriptors (`arrow` for Harlowe/Chapbook, `pipe` for SugarCube/Snowman)
-- [ ] T012 Implement `src/twine/adapter.ts` — thin wrapper around `extwee` for parse (Twee → Story), emit (Story → Twee), compile (Story → HTML with bundled runtime), and spec-valid IFID auto-generation; all parsing delegated to extwee, zero hand-rolled format code (Constitution Principle I)
-- [ ] T013 [P] Implement `src/lib/slug.ts` — `storySlug(name: string) → string` producing URL-safe kebab-case
+- [X] T011 Implement `src/twine/formats.ts` — `StoryFormat` enum (Harlowe/SugarCube/Chapbook/Snowman), default versions map (Harlowe 3.3.8, SugarCube 2.36.1, Chapbook 2.1.0, Snowman 2.0.2), per-format link-syntax descriptors (`arrow` for Harlowe/Chapbook, `pipe` for SugarCube/Snowman)
+- [X] T012 Implement `src/twine/adapter.ts` — thin wrapper around `extwee` for parse (Twee → Story), emit (Story → Twee), compile (Story → HTML with bundled runtime), and spec-valid IFID auto-generation; all parsing delegated to extwee, zero hand-rolled format code (Constitution Principle I)
+- [X] T013 [P] Implement `src/lib/slug.ts` — `storySlug(name: string) → string` producing URL-safe kebab-case
 - [ ] T014 [P] Implement `src/lib/path.ts` — `assetsDir(storyDir, storySlug)` and `placeholderPath(storyDir, storySlug, label, ext)`
 - [ ] T015 [P] Implement `src/lib/logger.ts` — structured stderr logger (stdout is reserved for MCP protocol)
-- [ ] T016 Implement `src/server/state.ts` — single active `Story` in memory (Constitution single-story model); getters, setters, mutation lock for last-write-wins with warning emission
-- [ ] T017 Implement `src/guide/registry.ts` — central `ToolRegistry` API where each tool registers `{ name, description, inputSchema, outputSchema, clarificationTriggers, examples }`; exported for the guide generator and the server wiring
-- [ ] T018 Implement `src/server/clarification.ts` — `ClarificationRequest` factory, session-init capability probe (sets transport to `elicitation` if the client advertises it, else `fallback`), elicitation invocation path via MCP SDK, fallback path returning `{ kind: "clarification_needed", clarification }`; in-memory map of `clarification_id → originating { tool, args }` for replay (R1)
-- [ ] T019 Implement `src/server/index.ts` — MCP server entrypoint; creates the SDK server, attaches stdio transport, reads client capabilities on init, registers all tools from `ToolRegistry`, registers all resources, wires `clarification.ts`
+- [X] T016 Implement `src/server/state.ts` — single active `Story` in memory (Constitution single-story model); getters, setters, mutation lock for last-write-wins with warning emission
+- [~] T017 Implement `src/guide/registry.ts` — central `ToolRegistry` API where each tool registers `{ name, description, inputSchema, outputSchema, clarificationTriggers, examples }`; exported for the guide generator and the server wiring
+- [~] T018 Implement `src/server/clarification.ts` — `ClarificationRequest` factory, session-init capability probe (sets transport to `elicitation` if the client advertises it, else `fallback`), elicitation invocation path via MCP SDK, fallback path returning `{ kind: "clarification_needed", clarification }`; in-memory map of `clarification_id → originating { tool, args }` for replay (R1)
+- [X] T019 Implement `src/server/index.ts` — MCP server entrypoint; creates the SDK server, attaches stdio transport, reads client capabilities on init, registers all tools from `ToolRegistry`, registers all resources, wires `clarification.ts`
 - [ ] T020 [P] Create `tests/fixtures/harlowe/simple.twee` — 3-passage Harlowe story with one decision point, fixture for round-trip and integration tests
 - [ ] T021 [P] Create `tests/fixtures/sugarcube/simple.twee` — same structure for SugarCube
 - [ ] T022 [P] Create `tests/fixtures/chapbook/simple.twee` — same structure for Chapbook
@@ -91,8 +98,8 @@ Chromium, and asserts every passage is reachable and the graph matches.
 > **NOTE: Constitution Principle III NON-NEGOTIABLE — these operations must live in
 > code, not in LLM prompts.**
 
-- [ ] T031 [US1] Implement `src/graph/link.ts` — `insertLink(sourcePassage, targetName, displayText?, insertionIndex?)` emitting format-specific syntax via `formats.ts`
-- [ ] T032 [US1] Implement `src/graph/rename.ts` — `renamePassage(oldName, newName)` that rewrites every incoming `[[...]]` across all passages AND updates `story.start_passage` when applicable; atomic
+- [X] T031 [US1] Implement `src/graph/link.ts` — `insertLink(sourcePassage, targetName, displayText?, insertionIndex?)` emitting format-specific syntax via `formats.ts`
+- [X] T032 [US1] Implement `src/graph/rename.ts` — `renamePassage(oldName, newName)` that rewrites every incoming `[[...]]` across all passages AND updates `story.start_passage` when applicable; atomic
 - [ ] T033 [US1] Implement `src/graph/delete.ts` — `deletePassage(name, strategy)` that finds incoming links, applies the chosen strategy (`remove_link_markup` | `leave_dangling`), and returns the affected-passage list
 
 ### Contract tests for User Story 1 tools
@@ -113,17 +120,17 @@ Chromium, and asserts every passage is reachable and the graph matches.
 
 ### Implementation tasks for User Story 1
 
-- [ ] T045 [P] [US1] Implement `src/server/tools/create_story.ts` — registers with `ToolRegistry`, uses `twine/adapter` for IFID generation, surfaces clarification on missing `format`
-- [ ] T046 [P] [US1] Implement `src/server/tools/create_passage.ts` — auto-positions when `position` omitted, sets as start if first passage or `set_as_start: true`, clarifies on duplicate name
+- [X] T045 [P] [US1] Implement `src/server/tools/create_story.ts` — registers with `ToolRegistry`, uses `twine/adapter` for IFID generation, surfaces clarification on missing `format`
+- [X] T046 [P] [US1] Implement `src/server/tools/create_passage.ts` — auto-positions when `position` omitted, sets as start if first passage or `set_as_start: true`, clarifies on duplicate name
 - [ ] T047 [P] [US1] Implement `src/server/tools/update_passage.ts` — reconciles image placeholders when their emitted HTML is removed from text, clarifies on format-mismatch link syntax
-- [ ] T048 [US1] Implement `src/server/tools/rename_passage.ts` — thin wrapper around `graph/rename.ts` (T032); clarifies on name collision or unknown old name
+- [X] T048 [US1] Implement `src/server/tools/rename_passage.ts` — thin wrapper around `graph/rename.ts` (T032); clarifies on name collision or unknown old name
 - [ ] T049 [US1] Implement `src/server/tools/delete_passage.ts` — thin wrapper around `graph/delete.ts` (T033); clarifies on incoming-link strategy when `handle_incoming_links="ask"`
-- [ ] T050 [US1] Implement `src/server/tools/link_passages.ts` — thin wrapper around `graph/link.ts` (T031); clarifies on unknown target (no silent creation)
+- [X] T050 [US1] Implement `src/server/tools/link_passages.ts` — thin wrapper around `graph/link.ts` (T031); clarifies on unknown target (no silent creation)
 - [ ] T051 [P] [US1] Implement `src/server/tools/set_start_passage.ts`
-- [ ] T052 [P] [US1] Implement `src/server/tools/list_passages.ts`
+- [X] T052 [P] [US1] Implement `src/server/tools/list_passages.ts`
 - [ ] T053 [P] [US1] Implement `src/server/tools/get_passage.ts`
 - [ ] T054 [P] [US1] Implement `src/server/tools/validate_story.ts`
-- [ ] T055 [US1] Implement `src/server/tools/save_story.ts` — writes `<slug>.twee` + compiled `<slug>.html` via `twine/adapter`, creates sibling `assets/<slug>/` directory (empty is fine), returns `pending_image_drops` list
+- [~] T055 [US1] Implement `src/server/tools/save_story.ts` — writes `<slug>.twee` + compiled `<slug>.html` via `twine/adapter`, creates sibling `assets/<slug>/` directory (empty is fine), returns `pending_image_drops` list
 - [ ] T056 [P] [US1] Implement `src/server/resources/story_summary.ts` — serves `twinery://story/current/summary`
 - [ ] T057 [P] [US1] Implement `src/server/resources/story_graph.ts` — serves `twinery://story/current/graph`
 - [ ] T058 [P] [US1] Implement `src/server/resources/story_twee.ts` — serves `twinery://story/current/twee`
@@ -160,7 +167,7 @@ a clarification and 0% apply a default.
 
 ### Implementation for User Story 2
 
-- [ ] T064 [US2] Implement `src/server/tools/respond_to_clarification.ts` — looks up `clarification_id` in `clarification.ts`'s in-memory map, merges `answer` into stored `originating_args`, reinvokes the originating tool
+- [X] T064 [US2] Implement `src/server/tools/respond_to_clarification.ts` — looks up `clarification_id` in `clarification.ts`'s in-memory map, merges `answer` into stored `originating_args`, reinvokes the originating tool
 
 ### Integration tests for User Story 2
 

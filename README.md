@@ -3,28 +3,33 @@
 **Proof-of-concept** MCP (Model Context Protocol) server that lets an LLM drive the
 authoring of branching [Twine 2](https://twinery.org/) interactive-fiction stories.
 
-This is a POC — v0.2 of the [full v1.0 plan](specs/001-mcp-server-mvp/plan.md) —
-covering branching-story authoring, image placeholders, and an LLM-facing guide
-resource. It exists to prove that you can attach this server to any MCP-compliant
-client, ask the LLM to build an illustrated branching story, and end up with a
-Twine-compatible file you can open in the native Twine 2 editor.
+This is a POC — v0.3 of the [full v1.0 plan](specs/001-mcp-server-mvp/plan.md) —
+covering branching-story authoring, the full edit/delete/validate surface, image
+placeholders, and an LLM-facing guide resource. It exists to prove that you can
+attach this server to any MCP-compliant client, ask the LLM to build and refine
+an illustrated branching story, and end up with a Twine-compatible file you can
+open in the native Twine 2 editor.
 
 **For the full v1.0 scope** (drift gates, cross-platform install scripts,
-multi-format story testing, automated tests, CI, MCP elicitation, more authoring
-tools like `update_passage` / `delete_passage`) see
+multi-format story testing, automated tests, CI, MCP elicitation) see
 [`specs/001-mcp-server-mvp/`](specs/001-mcp-server-mvp/).
 
-## What's in v0.2
+## What's in v0.3
 
-**8 MCP tools**:
+**13 MCP tools**:
 
 | Tool | Purpose |
 |------|---------|
 | `create_story` | Start a new story (name + format). Asks for the format if you omit it — no silent defaults. Auto-generates a spec-valid IFID. |
 | `create_passage` | Add a passage. First one becomes the start unless told otherwise. Auto-positions on the Twine canvas. |
-| `link_passages` | Insert a `[[...]]` link from one passage to another using format-appropriate syntax (arrow for Harlowe/Chapbook, pipe for SugarCube/Snowman). Refuses to silently create missing passages. |
+| `update_passage` | Mutate text / tags / position / size on an existing passage. Does NOT rename (use `rename_passage` for that so link integrity is enforced). |
 | `rename_passage` | Rename a passage and rewrite every `[[...]]` reference to it across the whole story atomically. Also updates the story's start passage if needed. |
+| `delete_passage` | Remove a passage. Surfaces a clarification if it's the start or if incoming links exist — never silently dangles the graph. Cleans up image placeholders tied to the passage. |
+| `link_passages` | Insert a `[[...]]` link from one passage to another using format-appropriate syntax (arrow for Harlowe/Chapbook, pipe for SugarCube/Snowman). Refuses to silently create missing passages. |
+| `set_start_passage` | Point the story's start passage at an existing passage. |
 | `list_passages` | Read-only overview — passages with their tags and outgoing links. |
+| `get_passage` | Read-only full passage dump including text and outgoing links. |
+| `validate_story` | Integrity sweep: broken links, orphans, duplicate names, IFID shape, start-passage validity. |
 | `add_image_placeholder` | Mark a spot in a passage for an image and report the exact file path + filename the author must drop. |
 | `save_story` | Write `<slug>.twee` and `<slug>.html` into a folder, plus a sibling `assets/<slug>/` drop zone. Reports any image placeholder whose file is still missing. |
 | `respond_to_clarification` | Resolve any question the server asked during another tool call (needed when your MCP client doesn't support MCP elicitation). |
@@ -151,9 +156,10 @@ npm run smoke
 ```
 
 This runs a scripted session that exercises every tool (including the
-clarification path, image placeholders with label collision handling, and the
-guide generator) and asserts the output files are well-formed Twine content.
-On success you'll see 13 green checks.
+clarification paths on unknown names and incoming-link handling, image
+placeholders with label collisions, and the guide generator) and asserts the
+output files are well-formed Twine content. On success you'll see 19 green
+checks.
 
 ## Known POC limitations (compared to v1.0)
 
@@ -163,9 +169,6 @@ On success you'll see 13 green checks.
   client supports it (see `specs/001-mcp-server-mvp/research.md` §R1).
 - Format-aware link syntax but only one default-version table; SugarCube / Chapbook
   / Snowman paths are accepted at the story level but most testing is on Harlowe.
-- No `delete_passage`, `update_passage`, `get_passage`, `set_start_passage`, or
-  `validate_story` tools yet — the subset here is the minimum for a branching
-  story with images. See `specs/001-mcp-server-mvp/tasks.md` for the full surface.
 - No automated drift gate enforcing that `docs/GUIDE.md` matches the current tool
   registry — the `twinery://guide` resource reads from `docs/GUIDE.md` (or
   regenerates on the fly if missing), and CI will add the byte-identity check in
@@ -191,7 +194,8 @@ src/
 │   └── formats.ts            # story-format enum + link syntax
 ├── graph/
 │   ├── link.ts               # insert [[...]] syntax into passage text
-│   └── rename.ts             # rename + rewrite every incoming link atomically
+│   ├── rename.ts             # rename + rewrite every incoming link atomically
+│   └── links.ts              # shared edge extraction, reachability, incoming-link removal
 ├── images/
 │   ├── render.ts             # inline-CSS <div><img><span> block + missing-file fallback
 │   └── placeholder.ts        # label validation, uniqueness, path derivation

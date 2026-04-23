@@ -7,6 +7,7 @@ import * as renamePassage from "../server/tools/rename_passage.js";
 import * as listPassages from "../server/tools/list_passages.js";
 import * as saveStory from "../server/tools/save_story.js";
 import * as respondToClarification from "../server/tools/respond_to_clarification.js";
+import * as addImagePlaceholder from "../server/tools/add_image_placeholder.js";
 
 export interface ToolExample {
   title: string;
@@ -48,6 +49,7 @@ export const TOOL_REGISTRY: ToolMetadata[] = [
   bind("link_passages", linkPassages as unknown as ToolModule),
   bind("rename_passage", renamePassage as unknown as ToolModule),
   bind("list_passages", listPassages as unknown as ToolModule),
+  bind("add_image_placeholder", addImagePlaceholder as unknown as ToolModule),
   bind("save_story", saveStory as unknown as ToolModule),
   bind("respond_to_clarification", respondToClarification as unknown as ToolModule),
 ];

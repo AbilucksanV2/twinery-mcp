@@ -1,12 +1,12 @@
 import { z } from "zod";
-import { mkdir, writeFile } from "node:fs/promises";
+import { access, mkdir, writeFile } from "node:fs/promises";
 import { isAbsolute, join, resolve } from "node:path";
 import { emitHtml, emitTwee } from "../../twine/adapter.js";
 import { requireActiveStory, setLastSavedDir } from "../state.js";
 import { ClarificationResponse, needClarification } from "../clarification.js";
 
 export const description =
-  "Persist the active story as <slug>.twee and <slug>.html into a directory, plus a sibling assets/<slug>/ drop zone. Asks for the output folder when omitted.";
+  "Persist the active story as <slug>.twee and <slug>.html into a directory, plus a sibling assets/<slug>/ drop zone. Reports every image placeholder whose file is not yet on disk. Asks for the output folder when omitted.";
 
 export const clarificationTriggers: string[] = [
   "output_dir missing: ask for the destination folder (free-form).",
@@ -44,7 +44,7 @@ export async function handler(args: SaveArgs): Promise<object | ClarificationRes
   }
 
   const active = requireActiveStory();
-  const { story, slug } = active;
+  const { story, slug, imagePlaceholders } = active;
 
   const dir = isAbsolute(args.output_dir)
     ? args.output_dir
@@ -66,14 +66,36 @@ export async function handler(args: SaveArgs): Promise<object | ClarificationRes
 
   setLastSavedDir(dir);
 
+  const pending: Array<{ label: string; expected_path: string }> = [];
+  for (const ph of imagePlaceholders) {
+    const absPath = join(dir, ph.expectedPathRelative);
+    const present = await fileExists(absPath);
+    if (!present) {
+      pending.push({ label: ph.label, expected_path: absPath });
+    }
+  }
+
   return {
     kind: "ok",
     written_files: written,
     assets_dir: assetsDir,
+    pending_image_drops: pending,
     notes: [
       "The .twee file is the canonical source — openable by any Twine tool.",
       "The .html file contains <tw-storydata> and can be imported into the Twine 2 editor (twinery.org/2) for visual editing.",
       "For standalone browser playback, import the HTML into Twine 2 and click Publish to File; or provide a story-format file and compile with extwee directly.",
+      pending.length > 0
+        ? `${pending.length} image placeholder file(s) are still expected — drop them at the paths listed under pending_image_drops.`
+        : "All image placeholder files are present (or none were declared).",
     ],
   };
+}
+
+async function fileExists(p: string): Promise<boolean> {
+  try {
+    await access(p);
+    return true;
+  } catch {
+    return false;
+  }
 }

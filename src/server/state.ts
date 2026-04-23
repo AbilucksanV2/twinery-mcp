@@ -1,17 +1,26 @@
 import { Story } from "extwee";
 import { StoryFormat } from "../twine/formats.js";
 
+export interface ImagePlaceholderRecord {
+  label: string;
+  extension: string;
+  passageName: string;
+  expectedFilename: string;
+  expectedPathRelative: string;
+}
+
 interface ActiveStory {
   story: Story;
   slug: string;
   format: StoryFormat;
   lastSavedDir: string | null;
+  imagePlaceholders: ImagePlaceholderRecord[];
 }
 
 let active: ActiveStory | null = null;
 
 export function setActiveStory(story: Story, slug: string, format: StoryFormat): void {
-  active = { story, slug, format, lastSavedDir: null };
+  active = { story, slug, format, lastSavedDir: null, imagePlaceholders: [] };
 }
 
 export function getActiveStory(): ActiveStory | null {

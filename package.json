@@ -9,7 +9,8 @@
   "scripts": {
     "build": "tsc",
     "start": "node dist/server/index.js",
-    "smoke": "node dist/smoke.js"
+    "smoke": "node dist/smoke.js",
+    "guide:generate": "node dist/guide/generate.js"
   },
   "license": "MIT",
   "engines": {

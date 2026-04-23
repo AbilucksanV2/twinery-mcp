@@ -2,6 +2,8 @@ import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
+import { writeFile } from "node:fs/promises";
+
 import * as createStory from "./server/tools/create_story.js";
 import * as createPassage from "./server/tools/create_passage.js";
 import * as linkPassages from "./server/tools/link_passages.js";
@@ -9,6 +11,9 @@ import * as renamePassage from "./server/tools/rename_passage.js";
 import * as listPassages from "./server/tools/list_passages.js";
 import * as saveStory from "./server/tools/save_story.js";
 import * as respondToClarification from "./server/tools/respond_to_clarification.js";
+import * as addImagePlaceholder from "./server/tools/add_image_placeholder.js";
+import { buildGuide } from "./guide/build.js";
+import { TOOL_REGISTRY } from "./guide/registry.js";
 
 function ok(msg: string): void {
   console.log(`  ✓ ${msg}`);
@@ -101,9 +106,42 @@ async function main(): Promise<void> {
   if (!hasNew) fail("new link target not present after rename");
   ok("graph integrity preserved (no broken incoming links)");
 
-  section("8. save_story — write .twee and .html");
+  section("8. add_image_placeholder — add 'brass-lock' to 'Lockpick' passage");
+  const img1 = await addImagePlaceholder.handler({
+    passage_name: "Lockpick",
+    label: "brass-lock",
+  }) as { kind: string; expected_filename: string; expected_path: string; path_is_final: boolean };
+  if (img1.kind !== "ok") fail("add_image_placeholder did not return ok: " + JSON.stringify(img1));
+  if (img1.expected_filename !== "brass-lock.png") fail(`expected filename brass-lock.png, got ${img1.expected_filename}`);
+  if (img1.path_is_final !== false) fail("path_is_final should be false pre-save");
+  if (!img1.expected_path.includes("assets/locked-door/brass-lock.png")) fail(`expected path contains assets/locked-door/brass-lock.png, got ${img1.expected_path}`);
+  ok(`placeholder added; expected file: ${img1.expected_filename} at ${img1.expected_path}`);
+
+  section("9. add_image_placeholder — duplicate label surfaces clarification (no silent rename)");
+  const imgDup = await addImagePlaceholder.handler({
+    passage_name: "Lockpick",
+    label: "brass-lock",
+  });
+  if (!isClarification(imgDup)) fail("expected clarification for duplicate label");
+  ok(`server asked: "${imgDup.clarification.question}"`);
+  if (!imgDup.clarification.valid_answers?.includes("confirm_auto_suffix")) fail("expected confirm_auto_suffix as a valid answer");
+  const imgResolved = await respondToClarification.handler({
+    clarification_id: imgDup.clarification.clarification_id,
+    answer: "confirm_auto_suffix",
+  }) as { kind: string; placeholder?: { label: string } };
+  if (imgResolved.kind !== "ok" || imgResolved.placeholder?.label !== "brass-lock-2") {
+    fail("expected auto-suffixed label brass-lock-2, got: " + JSON.stringify(imgResolved));
+  }
+  ok("auto-suffix accepted; second placeholder labeled brass-lock-2");
+
+  section("10. save_story — write .twee/.html and report pending_image_drops");
   const tmp = await mkdtemp(join(tmpdir(), "twinery-smoke-"));
-  const saved = await saveStory.handler({ output_dir: tmp }) as { kind: string; written_files: string[]; assets_dir: string };
+  const saved = await saveStory.handler({ output_dir: tmp }) as {
+    kind: string;
+    written_files: string[];
+    assets_dir: string;
+    pending_image_drops: Array<{ label: string; expected_path: string }>;
+  };
   if (saved.kind !== "ok" || saved.written_files.length !== 2) fail("save_story did not write both files");
   ok(`wrote: ${saved.written_files.map((f) => f.replace(tmp, "<tmp>")).join(", ")}`);
   ok(`assets dir: ${saved.assets_dir.replace(tmp, "<tmp>")}`);
@@ -117,9 +155,35 @@ async function main(): Promise<void> {
   ok(".twee contains rewritten link");
   ok(".html contains <tw-storydata> with Harlowe format");
 
+  // Passage text is HTML-encoded inside <tw-storydata> per the Twine 2 HTML spec;
+  // the Twine runtime decodes it at play time. Check for the decoded substrings.
+  if (!htmlBody.includes("twinery-mcp-image")) fail(".html missing image placeholder block identifier");
+  if (!htmlBody.includes("brass-lock.png")) fail(".html missing brass-lock image src");
+  ok(".html contains image placeholder block with brass-lock.png reference");
+
+  if (saved.pending_image_drops.length !== 2) fail(`expected 2 pending image drops, got ${saved.pending_image_drops.length}`);
+  ok(`save_story reports ${saved.pending_image_drops.length} pending image drops: ${saved.pending_image_drops.map((d) => d.label).join(", ")}`);
+
+  section("11. pending_image_drops shrinks after a file appears on disk");
+  const dropPath = saved.pending_image_drops[0]!.expected_path;
+  await writeFile(dropPath, "fake-png-bytes", "utf8");
+  const saved2 = await saveStory.handler({ output_dir: tmp }) as { pending_image_drops: Array<{ label: string }> };
+  if (saved2.pending_image_drops.length !== 1) fail(`expected 1 pending drop after file appeared, got ${saved2.pending_image_drops.length}`);
+  ok(`after dropping one file: ${saved2.pending_image_drops.length} pending drop(s) remain`);
+
   await rm(tmp, { recursive: true, force: true });
 
-  section("9. Clarification path: save_story without output_dir");
+  section("12. Guide generator — covers every registered tool");
+  const guide = buildGuide();
+  if (!guide.startsWith("# Twinery MCP Server — Tool Guide")) fail("guide missing title");
+  for (const tool of TOOL_REGISTRY) {
+    const heading = `### \`${tool.name}\``;
+    if (!guide.includes(heading)) fail(`guide missing heading for ${tool.name}`);
+  }
+  ok(`guide mentions all ${TOOL_REGISTRY.length} registered tools`);
+  ok(`guide size: ${guide.length} bytes`);
+
+  section("13. Clarification path: save_story without output_dir");
   const c3 = await saveStory.handler({});
   if (!isClarification(c3)) fail("expected clarification for missing output_dir");
   ok(`server asked: "${c3.clarification.question}"`);

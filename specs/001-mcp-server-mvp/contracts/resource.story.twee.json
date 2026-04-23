@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "resource.story.twee.json",
+  "title": "twinery://story/current/twee",
+  "description": "Full Twee 3 source for the active story, emitted via extwee. Use when the LLM needs to see the exact canonical source (e.g., for quoting in explanations). Byte-identical to what save_story would write.",
+  "type": "object",
+  "properties": {
+    "uri": { "const": "twinery://story/current/twee" },
+    "mimeType": { "const": "text/plain" },
+    "body_description": "UTF-8 Twee 3 source. Begins with :: StoryTitle, :: StoryData, and then one header-and-text block per passage."
+  }
+}

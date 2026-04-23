@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "tool.rename_passage.json",
+  "title": "rename_passage",
+  "description": "Rename a passage and rewrite every incoming [[...]] link across the story atomically. Also updates story.start_passage if the renamed passage was the start. This is the flagship graph-integrity operation (Constitution Principle III).",
+  "type": "object",
+  "properties": {
+    "input": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["old_name", "new_name"],
+      "properties": {
+        "old_name": { "$ref": "shared.passage-id.json" },
+        "new_name": { "$ref": "shared.passage-id.json" }
+      }
+    },
+    "output_ok": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "renamed", "incoming_links_rewritten", "affected_passages", "start_passage_updated"],
+      "properties": {
+        "kind": { "const": "ok" },
+        "renamed": { "const": true },
+        "incoming_links_rewritten": { "type": "integer", "minimum": 0 },
+        "affected_passages": {
+          "type": "array",
+          "items": { "$ref": "shared.passage-id.json" }
+        },
+        "start_passage_updated": { "type": "boolean" }
+      }
+    },
+    "output_clarification": { "$ref": "shared.clarification.json" }
+  },
+  "clarification_triggers": [
+    "new_name collides with an existing passage: ask suffix | replace | cancel",
+    "old_name does not exist: ask which passage was meant (valid_answers = nearest matches)"
+  ],
+  "acceptance_test_hooks": [
+    "US1 scenario 4: rename Hallway→Corridor with 3 incoming links → all rewritten, 0 broken",
+    "Edge case: renaming the start passage updates story.start_passage"
+  ]
+}

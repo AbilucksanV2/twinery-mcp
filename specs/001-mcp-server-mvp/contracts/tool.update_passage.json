@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "tool.update_passage.json",
+  "title": "update_passage",
+  "description": "Mutate text/tags/position/size on an existing passage. Does NOT rename — use rename_passage for that so link integrity is enforced.",
+  "type": "object",
+  "properties": {
+    "input": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name"],
+      "properties": {
+        "name": { "$ref": "shared.passage-id.json" },
+        "text": { "type": "string" },
+        "tags": { "type": "array", "items": { "type": "string", "pattern": "^\\S+$" } },
+        "position": { "type": "object", "required": ["x", "y"], "properties": { "x": {"type":"number","minimum":0}, "y": {"type":"number","minimum":0} } },
+        "size": { "type": "object", "required": ["w", "h"], "properties": { "w": {"type":"number","exclusiveMinimum":0}, "h": {"type":"number","exclusiveMinimum":0} } }
+      }
+    },
+    "output_ok": {
+      "type": "object",
+      "required": ["kind", "passage", "image_placeholders_reconciled"],
+      "properties": {
+        "kind": { "const": "ok" },
+        "passage": { "type": "object" },
+        "image_placeholders_reconciled": { "type": "integer", "minimum": 0, "description": "Count of ImagePlaceholder records removed because their emitted HTML is no longer present in text." }
+      }
+    },
+    "output_clarification": { "$ref": "shared.clarification.json" }
+  },
+  "clarification_triggers": [
+    "name does not exist: ask which passage was meant (valid_answers = nearest matches)",
+    "supplied text contains link syntax that does not match the story's declared format: ask rewrite_to_match | keep_as_is | cancel"
+  ]
+}

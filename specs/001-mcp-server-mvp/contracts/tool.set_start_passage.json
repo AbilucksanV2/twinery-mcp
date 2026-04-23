@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "tool.set_start_passage.json",
+  "title": "set_start_passage",
+  "description": "Point the story's start_passage to an existing passage.",
+  "type": "object",
+  "properties": {
+    "input": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name"],
+      "properties": {
+        "name": { "$ref": "shared.passage-id.json" }
+      }
+    },
+    "output_ok": {
+      "type": "object",
+      "required": ["kind", "previous_start", "current_start"],
+      "properties": {
+        "kind": { "const": "ok" },
+        "previous_start": { "type": ["string", "null"] },
+        "current_start": { "$ref": "shared.passage-id.json" }
+      }
+    },
+    "output_clarification": { "$ref": "shared.clarification.json" }
+  },
+  "clarification_triggers": [
+    "name does not exist: ask which passage was meant (valid_answers = nearest matches)"
+  ]
+}

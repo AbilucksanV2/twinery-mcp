@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "shared.clarification.json",
+  "title": "ClarificationRequest",
+  "description": "Shape of a 'needs clarification' response when the MCP client does not support MCP elicitation. When the client does support elicitation, this same information content is delivered via the SDK's elicitation primitive instead of in the tool response body.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "clarification"],
+  "properties": {
+    "kind": { "const": "clarification_needed" },
+    "clarification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["clarification_id", "question", "free_text_allowed", "originating_tool", "originating_args"],
+      "properties": {
+        "clarification_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Replay key for respond_to_clarification."
+        },
+        "question": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Short, author-facing question."
+        },
+        "valid_answers": {
+          "type": "array",
+          "items": { "type": "string" },
+          "minItems": 1,
+          "description": "Enum of acceptable answers where the space is finite; omit when open-ended."
+        },
+        "free_text_allowed": {
+          "type": "boolean",
+          "description": "True when 'valid_answers' is absent or non-exhaustive."
+        },
+        "originating_tool": {
+          "type": "string",
+          "description": "Name of the tool that emitted this request."
+        },
+        "originating_args": {
+          "type": "object",
+          "description": "The partial args the caller had already supplied; replayed when the clarification resolves."
+        }
+      }
+    }
+  }
+}

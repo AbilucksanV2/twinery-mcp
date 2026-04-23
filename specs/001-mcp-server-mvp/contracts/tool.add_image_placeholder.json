@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "tool.add_image_placeholder.json",
+  "title": "add_image_placeholder",
+  "description": "Insert an image placeholder in a passage and return the expected file path and filename the author must drop. Emits an <img> + fallback <div> per R3 and refreshes the story's shared stylesheet so missing files render as labeled dashed-border boxes.",
+  "type": "object",
+  "properties": {
+    "input": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["passage_name", "label"],
+      "properties": {
+        "passage_name": { "$ref": "shared.passage-id.json" },
+        "label": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9-]{0,62}$",
+          "description": "Kebab-case. Becomes the filename stem. Unique across all placeholders in the story."
+        },
+        "extension": {
+          "type": "string",
+          "enum": ["png", "jpg", "jpeg", "gif", "webp"],
+          "default": "png",
+          "description": "The extension the emitted <img src> will request. Author may later drop any of the allowed extensions at play time; if the declared one is missing, the fallback renders."
+        },
+        "insertion_index": {
+          "type": ["integer", "null"],
+          "minimum": 0,
+          "description": "Character offset in passage text; null = append."
+        }
+      }
+    },
+    "output_ok": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "placeholder", "expected_path", "expected_filename"],
+      "properties": {
+        "kind": { "const": "ok" },
+        "placeholder": {
+          "type": "object",
+          "required": ["label", "passage_name"],
+          "properties": {
+            "label": { "type": "string" },
+            "passage_name": { "$ref": "shared.passage-id.json" }
+          }
+        },
+        "expected_filename": {
+          "type": "string",
+          "description": "e.g. 'ancient-tree.png'"
+        },
+        "expected_path": {
+          "type": "string",
+          "description": "Project-relative path if the story has been saved (e.g. 'assets/locked-door/ancient-tree.png'); otherwise annotated as pending a save location."
+        },
+        "path_is_final": {
+          "type": "boolean",
+          "description": "True once the story has been saved; false before first save (final path depends on save location)."
+        }
+      }
+    },
+    "output_clarification": { "$ref": "shared.clarification.json" }
+  },
+  "clarification_triggers": [
+    "label collides with an existing placeholder: ask pick_new_label | confirm_auto_suffix | cancel (no silent rename)",
+    "passage_name does not exist: ask to create it or cancel"
+  ],
+  "acceptance_test_hooks": [
+    "US3 scenario 1: add 'ancient-tree' to 'Forest' in story 'Locked Door' → returns assets/locked-door/ancient-tree.png",
+    "US3 scenario 2: after drop, played HTML loads the image inline",
+    "US3 scenario 3: without drop, played HTML shows labeled fallback"
+  ]
+}

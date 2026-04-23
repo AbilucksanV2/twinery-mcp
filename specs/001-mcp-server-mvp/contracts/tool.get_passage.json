@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "tool.get_passage.json",
+  "title": "get_passage",
+  "description": "Return a single passage in full. Read-only; emits a clarification only when the name is ambiguous (typo).",
+  "type": "object",
+  "properties": {
+    "input": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name"],
+      "properties": {
+        "name": { "$ref": "shared.passage-id.json" }
+      }
+    },
+    "output_ok": {
+      "type": "object",
+      "required": ["kind", "passage"],
+      "properties": {
+        "kind": { "const": "ok" },
+        "passage": {
+          "type": "object",
+          "required": ["name", "text", "tags"],
+          "properties": {
+            "name": { "$ref": "shared.passage-id.json" },
+            "text": { "type": "string" },
+            "tags": { "type": "array", "items": { "type": "string" } },
+            "position": { "type": "object" },
+            "size": { "type": "object" }
+          }
+        }
+      }
+    },
+    "output_clarification": { "$ref": "shared.clarification.json" }
+  },
+  "clarification_triggers": [
+    "name does not exist: ask which passage was meant (valid_answers = nearest matches)"
+  ]
+}

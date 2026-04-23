@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "tool.list_passages.json",
+  "title": "list_passages",
+  "description": "Return an overview of all passages with their outgoing links. Read-only; never emits clarifications.",
+  "type": "object",
+  "properties": {
+    "input": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "include_text": { "type": "boolean", "default": false, "description": "When true, include full passage.text; default off to keep payloads small." }
+      }
+    },
+    "output_ok": {
+      "type": "object",
+      "required": ["kind", "passages", "start_passage"],
+      "properties": {
+        "kind": { "const": "ok" },
+        "start_passage": { "$ref": "shared.passage-id.json" },
+        "passages": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "tags", "outgoing_links"],
+            "properties": {
+              "name": { "$ref": "shared.passage-id.json" },
+              "tags": { "type": "array", "items": { "type": "string" } },
+              "position": { "type": "object" },
+              "outgoing_links": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": ["to_passage"],
+                  "properties": {
+                    "to_passage": { "$ref": "shared.passage-id.json" },
+                    "display_text": { "type": ["string", "null"] }
+                  }
+                }
+              },
+              "text": { "type": "string" }
+            }
+          }
+        }
+      }
+    }
+  }
+}

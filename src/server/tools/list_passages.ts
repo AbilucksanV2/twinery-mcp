@@ -1,6 +1,16 @@
 import { z } from "zod";
 import { requireActiveStory } from "../state.js";
 
+export const description =
+  "Return the list of passages with their tags and outgoing links. Read-only; never emits a clarification. Set `include_text: true` to also include each passage's full text.";
+
+export const clarificationTriggers: string[] = [];
+
+export const example = {
+  title: "Get a graph overview",
+  input: { include_text: false },
+};
+
 export const inputSchema = {
   include_text: z.boolean().optional(),
 };

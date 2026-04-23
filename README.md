@@ -3,18 +3,20 @@
 **Proof-of-concept** MCP (Model Context Protocol) server that lets an LLM drive the
 authoring of branching [Twine 2](https://twinery.org/) interactive-fiction stories.
 
-This is a POC — a small subset of the [full v1.0 plan](specs/001-mcp-server-mvp/plan.md).
-It exists to prove one thing: that you can attach this server to any MCP-compliant
-client, ask the LLM to build a branching story, and end up with a Twine-compatible
-file you can open in the native Twine 2 editor.
+This is a POC — v0.2 of the [full v1.0 plan](specs/001-mcp-server-mvp/plan.md) —
+covering branching-story authoring, image placeholders, and an LLM-facing guide
+resource. It exists to prove that you can attach this server to any MCP-compliant
+client, ask the LLM to build an illustrated branching story, and end up with a
+Twine-compatible file you can open in the native Twine 2 editor.
 
-**For the full v1.0 scope** (image placeholders, LLM-facing guide resource, drift
-gates, cross-platform install scripts, multi-format story support, tests, CI) see
+**For the full v1.0 scope** (drift gates, cross-platform install scripts,
+multi-format story testing, automated tests, CI, MCP elicitation, more authoring
+tools like `update_passage` / `delete_passage`) see
 [`specs/001-mcp-server-mvp/`](specs/001-mcp-server-mvp/).
 
-## What's in the POC
+## What's in v0.2
 
-**7 MCP tools**:
+**8 MCP tools**:
 
 | Tool | Purpose |
 |------|---------|
@@ -23,13 +25,28 @@ gates, cross-platform install scripts, multi-format story support, tests, CI) se
 | `link_passages` | Insert a `[[...]]` link from one passage to another using format-appropriate syntax (arrow for Harlowe/Chapbook, pipe for SugarCube/Snowman). Refuses to silently create missing passages. |
 | `rename_passage` | Rename a passage and rewrite every `[[...]]` reference to it across the whole story atomically. Also updates the story's start passage if needed. |
 | `list_passages` | Read-only overview — passages with their tags and outgoing links. |
-| `save_story` | Write `<slug>.twee` and `<slug>.html` into a folder, plus a sibling `assets/<slug>/` drop zone. |
-| `respond_to_clarification` | Resolve any question the server asked during another tool call (only needed when your MCP client doesn't support MCP elicitation). |
+| `add_image_placeholder` | Mark a spot in a passage for an image and report the exact file path + filename the author must drop. |
+| `save_story` | Write `<slug>.twee` and `<slug>.html` into a folder, plus a sibling `assets/<slug>/` drop zone. Reports any image placeholder whose file is still missing. |
+| `respond_to_clarification` | Resolve any question the server asked during another tool call (needed when your MCP client doesn't support MCP elicitation). |
+
+**1 MCP resource**:
+
+| URI | Purpose |
+|-----|---------|
+| `twinery://guide` | LLM-facing Markdown guide — describes every tool, the clarification protocol, and the image-placeholder convention. Auto-generated from the tool registry so it can't go stale. Byte-identical to `docs/GUIDE.md` on disk. |
 
 **Clarification pattern**: when a tool is missing required info, it returns
 `{ kind: "clarification_needed", clarification: { clarification_id, question, valid_answers?, ... } }`
 instead of silently defaulting. The LLM can relay the question to the human and
 resume by calling `respond_to_clarification` with the answer.
+
+**Image placeholder pattern**: `add_image_placeholder({passage_name, label})` inserts
+a self-contained `<div><img>…</div>` block into the passage. The server reports the
+expected file path (`<saved-dir>/assets/<story-slug>/<label>.png` by default). Drop
+a file there and the played HTML loads it automatically; skip it and the compiled
+HTML shows a labeled dashed-border fallback box instead of a broken-image icon.
+`save_story` reports every placeholder whose file is still missing under
+`pending_image_drops`.
 
 ## Prerequisites
 
@@ -92,16 +109,24 @@ The LLM will call the tools in roughly this sequence:
    see the clarification pop up in your client or the LLM will relay it to you.
 2. `create_passage` × 3 — Start, Pick Lock, Kick Door.
 3. `link_passages` × 2 — Start → Pick Lock, Start → Kick Door.
-4. `save_story` — writes the files.
+4. *(optional)* `add_image_placeholder` — e.g. a `brass-lock` image in the Pick Lock
+   passage. The server replies with the exact file path to drop the image at.
+5. `save_story` — writes the files and reports any image placeholders still
+   pending a file on disk.
 
 When it finishes, you'll have:
 
 ```text
 stories/locked-door/
-├── locked-door.twee          # canonical Twee 3 source
-├── locked-door.html          # openable in Twine 2 editor
-└── assets/locked-door/       # empty drop zone for future assets
+├── locked-door.twee                    # canonical Twee 3 source
+├── locked-door.html                    # openable in Twine 2 editor
+└── assets/locked-door/                 # drop image files here
+    └── brass-lock.png                  # placed by you after add_image_placeholder
 ```
+
+The LLM will also read `twinery://guide` on first use (or when it needs a
+refresher) — that resource is the auto-generated tool reference in
+`docs/GUIDE.md`. Any MCP client can fetch it the same way.
 
 ## Verify the result in Twine
 
@@ -126,8 +151,9 @@ npm run smoke
 ```
 
 This runs a scripted session that exercises every tool (including the
-clarification path) and asserts the output files are well-formed Twine content.
-On success you'll see 9 green checks.
+clarification path, image placeholders with label collision handling, and the
+guide generator) and asserts the output files are well-formed Twine content.
+On success you'll see 13 green checks.
 
 ## Known POC limitations (compared to v1.0)
 
@@ -137,11 +163,14 @@ On success you'll see 9 green checks.
   client supports it (see `specs/001-mcp-server-mvp/research.md` §R1).
 - Format-aware link syntax but only one default-version table; SugarCube / Chapbook
   / Snowman paths are accepted at the story level but most testing is on Harlowe.
-- No image placeholder tool yet (planned as US3 in the spec).
-- No MCP resource for an LLM-facing guide (planned as US4).
 - No `delete_passage`, `update_passage`, `get_passage`, `set_start_passage`, or
   `validate_story` tools yet — the subset here is the minimum for a branching
-  story. See `specs/001-mcp-server-mvp/tasks.md` for the full surface.
+  story with images. See `specs/001-mcp-server-mvp/tasks.md` for the full surface.
+- No automated drift gate enforcing that `docs/GUIDE.md` matches the current tool
+  registry — the `twinery://guide` resource reads from `docs/GUIDE.md` (or
+  regenerates on the fly if missing), and CI will add the byte-identity check in
+  a later iteration. Run `npm run guide:generate` after changing any tool's
+  metadata.
 - No tests beyond the smoke script. The v1.0 plan includes fixture-based round-
   trip tests across all four story formats plus a headless-browser verification
   pass.
@@ -153,9 +182,9 @@ On success you'll see 9 green checks.
 ```text
 src/
 ├── server/
-│   ├── index.ts              # MCP stdio entrypoint
+│   ├── index.ts              # MCP stdio entrypoint; reads tools from the registry
 │   ├── clarification.ts      # structured "ask instead of assume" plumbing
-│   ├── state.ts              # single active-story holder
+│   ├── state.ts              # single active-story holder + placeholder tracker
 │   └── tools/                # one file per MCP tool
 ├── twine/
 │   ├── adapter.ts            # thin wrapper around extwee
@@ -163,11 +192,21 @@ src/
 ├── graph/
 │   ├── link.ts               # insert [[...]] syntax into passage text
 │   └── rename.ts             # rename + rewrite every incoming link atomically
+├── images/
+│   ├── render.ts             # inline-CSS <div><img><span> block + missing-file fallback
+│   └── placeholder.ts        # label validation, uniqueness, path derivation
+├── guide/
+│   ├── registry.ts           # tool registry — SSOT used by server + guide
+│   ├── build.ts              # generates GUIDE.md Markdown from the registry
+│   └── generate.ts           # writes docs/GUIDE.md
 ├── lib/
 │   └── slug.ts               # story-slug derivation
 ├── types/
 │   └── extwee.d.ts           # TypeScript ambient types for extwee
 └── smoke.ts                  # scripted sanity test
+
+docs/
+└── GUIDE.md                  # auto-generated; served at twinery://guide
 ```
 
 ## Scripts
@@ -177,6 +216,7 @@ src/
 | `npm run build` | Compile TypeScript to `dist/` |
 | `npm run start` | Launch the MCP server over stdio |
 | `npm run smoke` | Run the scripted end-to-end sanity test |
+| `npm run guide:generate` | Regenerate `docs/GUIDE.md` from the tool registry |
 
 ## Design principles (the ones the POC honours)
 

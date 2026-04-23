@@ -1,7 +1,7 @@
 {
   "name": "twinery-mcp-poc",
-  "version": "0.0.1",
-  "description": "POC of an MCP server that lets an LLM author branching Twine 2 stories. See specs/001-mcp-server-mvp/ for the full v1.0 plan.",
+  "version": "0.2.0",
+  "description": "POC of an MCP server that lets an LLM author branching Twine 2 stories, with image placeholders and an LLM-facing guide resource. See specs/001-mcp-server-mvp/ for the full v1.0 plan.",
   "type": "module",
   "bin": {
     "twinery-mcp-poc": "./dist/server/index.js"
@@ -9,7 +9,8 @@
   "scripts": {
     "build": "tsc",
     "start": "node dist/server/index.js",
-    "smoke": "node dist/smoke.js"
+    "smoke": "node dist/smoke.js",
+    "guide:generate": "node dist/guide/generate.js"
   },
   "license": "MIT",
   "engines": {

@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "tool.create_passage.json",
+  "title": "create_passage",
+  "description": "Add a new passage. Auto-assigns position to avoid overlap when omitted.",
+  "type": "object",
+  "properties": {
+    "input": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name"],
+      "properties": {
+        "name": { "$ref": "shared.passage-id.json" },
+        "text": { "type": "string" },
+        "tags": {
+          "type": "array",
+          "items": { "type": "string", "pattern": "^\\S+$" },
+          "uniqueItems": true
+        },
+        "position": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["x", "y"],
+          "properties": {
+            "x": { "type": "number", "minimum": 0 },
+            "y": { "type": "number", "minimum": 0 }
+          }
+        },
+        "size": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["w", "h"],
+          "properties": {
+            "w": { "type": "number", "exclusiveMinimum": 0 },
+            "h": { "type": "number", "exclusiveMinimum": 0 }
+          }
+        },
+        "set_as_start": {
+          "type": "boolean",
+          "description": "If true, update the story's start_passage to this passage (first passage created is the default start when this flag is absent)."
+        }
+      }
+    },
+    "output_ok": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "passage", "is_start"],
+      "properties": {
+        "kind": { "const": "ok" },
+        "passage": { "type": "object" },
+        "is_start": { "type": "boolean" }
+      }
+    },
+    "output_clarification": { "$ref": "shared.clarification.json" }
+  },
+  "clarification_triggers": [
+    "duplicate name: ask whether to suffix, replace, or cancel (valid_answers: suffix | replace | cancel)",
+    "no story exists yet (create_story not called): ask to create the story first"
+  ]
+}

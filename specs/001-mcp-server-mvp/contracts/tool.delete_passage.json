@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "tool.delete_passage.json",
+  "title": "delete_passage",
+  "description": "Remove a passage. When other passages link to it, the server never silently dangles — it emits a clarification asking how to handle incoming links.",
+  "type": "object",
+  "properties": {
+    "input": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name"],
+      "properties": {
+        "name": { "$ref": "shared.passage-id.json" },
+        "handle_incoming_links": {
+          "type": "string",
+          "enum": ["ask", "remove_link_markup", "leave_dangling"],
+          "default": "ask",
+          "description": "'ask' triggers a clarification when incoming links exist. 'remove_link_markup' strips the [[...]] syntax from each source passage. 'leave_dangling' keeps the markup (will fail validate_story)."
+        }
+      }
+    },
+    "output_ok": {
+      "type": "object",
+      "required": ["kind", "deleted", "incoming_links_handled"],
+      "properties": {
+        "kind": { "const": "ok" },
+        "deleted": { "const": true },
+        "incoming_links_handled": {
+          "type": "object",
+          "required": ["strategy", "count", "affected_passages"],
+          "properties": {
+            "strategy": { "type": "string", "enum": ["remove_link_markup", "leave_dangling", "none"] },
+            "count": { "type": "integer", "minimum": 0 },
+            "affected_passages": { "type": "array", "items": { "$ref": "shared.passage-id.json" } }
+          }
+        }
+      }
+    },
+    "output_clarification": { "$ref": "shared.clarification.json" }
+  },
+  "clarification_triggers": [
+    "handle_incoming_links='ask' AND incoming links exist: ask remove_link_markup | leave_dangling | cancel",
+    "name is the story's start_passage: ask which passage becomes the new start before deletion proceeds"
+  ]
+}

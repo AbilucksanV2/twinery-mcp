@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "tool.validate_story.json",
+  "title": "validate_story",
+  "description": "Run the full integrity sweep required by Constitution Principle III. Read-only; never emits clarifications.",
+  "type": "object",
+  "properties": {
+    "input": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {}
+    },
+    "output_ok": {
+      "type": "object",
+      "required": ["kind", "ok", "broken_links", "orphans", "duplicate_names", "ifid_valid", "start_passage_valid", "format_mismatch_passages"],
+      "properties": {
+        "kind": { "const": "ok" },
+        "ok": { "type": "boolean", "description": "True only when every other field is empty / valid." },
+        "broken_links": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["from_passage", "to_passage"],
+            "properties": {
+              "from_passage": { "$ref": "shared.passage-id.json" },
+              "to_passage": { "$ref": "shared.passage-id.json" }
+            }
+          }
+        },
+        "orphans": { "type": "array", "items": { "$ref": "shared.passage-id.json" }, "description": "Passages unreachable from start_passage." },
+        "duplicate_names": { "type": "array", "items": { "$ref": "shared.passage-id.json" } },
+        "ifid_valid": { "type": "boolean" },
+        "start_passage_valid": { "type": "boolean" },
+        "format_mismatch_passages": {
+          "type": "array",
+          "items": { "$ref": "shared.passage-id.json" },
+          "description": "Passages whose text contains link syntax that doesn't match the story's declared format."
+        }
+      }
+    }
+  }
+}

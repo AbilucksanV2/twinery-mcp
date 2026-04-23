@@ -1,0 +1,8 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "shared.story-format.json",
+  "title": "StoryFormat",
+  "description": "The four IFTF-documented Twine 2 story formats supported in v1.0.",
+  "type": "string",
+  "enum": ["Harlowe", "SugarCube", "Chapbook", "Snowman"]
+}

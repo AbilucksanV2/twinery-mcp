@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "tool.save_story.json",
+  "title": "save_story",
+  "description": "Persist the active story to the filesystem as Twee source and (by default) compile to Twine 2 HTML via extwee. Creates the sibling assets/<story-slug>/ directory if missing so image placeholders have a ready drop zone.",
+  "type": "object",
+  "properties": {
+    "input": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["output_dir"],
+      "properties": {
+        "output_dir": {
+          "type": "string",
+          "description": "Absolute or process-cwd-relative directory. Files written: <output_dir>/<story-slug>.twee and (if compile_html) <output_dir>/<story-slug>.html, plus <output_dir>/assets/<story-slug>/ directory."
+        },
+        "compile_html": {
+          "type": "boolean",
+          "default": true,
+          "description": "When true, emit a playable HTML bundled with the story format's runtime via extwee."
+        },
+        "overwrite": {
+          "type": "boolean",
+          "default": false,
+          "description": "When false, refuse to overwrite existing files and surface a clarification."
+        }
+      }
+    },
+    "output_ok": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "written_files", "assets_dir"],
+      "properties": {
+        "kind": { "const": "ok" },
+        "written_files": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "assets_dir": {
+          "type": "string",
+          "description": "The assets/<story-slug>/ directory; created empty if it did not exist."
+        },
+        "pending_image_drops": {
+          "type": "array",
+          "description": "One entry per image placeholder whose expected file is not yet present on disk.",
+          "items": {
+            "type": "object",
+            "required": ["label", "expected_path"],
+            "properties": {
+              "label": { "type": "string" },
+              "expected_path": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "output_clarification": { "$ref": "shared.clarification.json" }
+  },
+  "clarification_triggers": [
+    "output_dir missing AND no prior save: ask for the destination folder",
+    "target file exists AND overwrite=false: ask overwrite | pick_new_dir | cancel"
+  ],
+  "acceptance_test_hooks": [
+    "US1 scenario 1–3: saved HTML opens in browser and in Twine 2 editor with identical graph",
+    "US3 scenario 2: assets_dir is created so the author's image drop path is valid immediately"
+  ]
+}

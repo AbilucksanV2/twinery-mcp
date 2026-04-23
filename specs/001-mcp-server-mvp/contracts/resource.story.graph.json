@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "resource.story.graph.json",
+  "title": "twinery://story/current/graph",
+  "description": "Full adjacency list. Great for LLM planning of large stories without pulling passage text.",
+  "type": "object",
+  "properties": {
+    "uri": { "const": "twinery://story/current/graph" },
+    "mimeType": { "const": "application/json" },
+    "body_schema": {
+      "type": "object",
+      "required": ["nodes", "edges", "start_passage"],
+      "properties": {
+        "start_passage": { "$ref": "shared.passage-id.json" },
+        "nodes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name"],
+            "properties": {
+              "name": { "$ref": "shared.passage-id.json" },
+              "tags": { "type": "array", "items": { "type": "string" } }
+            }
+          }
+        },
+        "edges": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["from", "to"],
+            "properties": {
+              "from": { "$ref": "shared.passage-id.json" },
+              "to": { "$ref": "shared.passage-id.json" },
+              "display_text": { "type": ["string", "null"] }
+            }
+          }
+        }
+      }
+    }
+  }
+}

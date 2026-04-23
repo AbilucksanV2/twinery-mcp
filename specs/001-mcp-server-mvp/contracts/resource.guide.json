@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "resource.guide.json",
+  "title": "twinery://guide",
+  "description": "LLM-facing tool guide. The resource body is byte-identical to docs/GUIDE.md in the repo, which is itself generated from src/guide/registry.ts + tool zod schemas. A drift test (tests/contract/guide-drift.test.ts) enforces parity.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "uri": { "const": "twinery://guide" },
+    "mimeType": { "const": "text/markdown" },
+    "name": { "const": "Twinery MCP Server Guide" },
+    "description": { "type": "string" },
+    "content_contract": {
+      "type": "array",
+      "description": "Content-level invariants validated by guide-drift test.",
+      "items": { "type": "string" },
+      "contains": {
+        "enum": [
+          "Lists every tool registered in src/guide/registry.ts",
+          "Lists every resource exposed by the server",
+          "For each tool, documents: purpose, input schema summary, output payload summary, clarification triggers",
+          "Shows one end-to-end example of building a branching story (mirrors quickstart.md)",
+          "Explains the clarification mechanism (elicitation vs fallback) so LLMs know what to do with clarification_needed payloads",
+          "Documents image-placeholder path convention: assets/<story-slug>/<label>.<ext>"
+        ]
+      }
+    }
+  }
+}

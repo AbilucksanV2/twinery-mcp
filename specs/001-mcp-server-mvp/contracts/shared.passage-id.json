@@ -1,0 +1,9 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "shared.passage-id.json",
+  "title": "PassageName",
+  "description": "A Twee 3 passage name. Unique within a story (case-sensitive). The IFTF Twee 3 spec requires backslash-escaping of [, ], {, }, and \\ in the serialised form; the server handles that transparently at emit time. Callers supply raw names.",
+  "type": "string",
+  "minLength": 1,
+  "maxLength": 1000
+}

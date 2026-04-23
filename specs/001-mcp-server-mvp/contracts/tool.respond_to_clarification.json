@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "tool.respond_to_clarification.json",
+  "title": "respond_to_clarification",
+  "description": "Resolve a clarification previously emitted by another tool. Used only when the client does not support MCP elicitation. The server re-runs the original tool call with the author's answer merged into the originating args.",
+  "type": "object",
+  "properties": {
+    "input": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["clarification_id", "answer"],
+      "properties": {
+        "clarification_id": { "type": "string", "format": "uuid" },
+        "answer": {
+          "type": "string",
+          "minLength": 1,
+          "description": "MUST match one of valid_answers if that list was enumerated; otherwise free text allowed per the originating ClarificationRequest."
+        }
+      }
+    },
+    "output_ok": {
+      "description": "Returns the original tool's output_ok payload (shape varies by originating_tool).",
+      "type": "object"
+    },
+    "output_clarification": {
+      "description": "If the answer itself triggers a further clarification (e.g., a suggested fallback still conflicts), another ClarificationRequest may chain.",
+      "$ref": "shared.clarification.json"
+    }
+  },
+  "clarification_triggers": [
+    "unknown clarification_id (expired or from another session): return error, no chain",
+    "answer not in valid_answers AND free_text_allowed=false: ask again with same id"
+  ]
+}

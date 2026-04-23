@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "resource.story.summary.json",
+  "title": "twinery://story/current/summary",
+  "description": "Compact read-only overview of the active story — cheap to render and great for LLM planning context.",
+  "type": "object",
+  "properties": {
+    "uri": { "const": "twinery://story/current/summary" },
+    "mimeType": { "const": "application/json" },
+    "body_schema": {
+      "type": "object",
+      "required": ["name", "ifid", "format", "format_version", "start_passage", "passage_count", "broken_link_count", "orphan_count", "image_placeholder_count"],
+      "properties": {
+        "name": { "type": "string" },
+        "ifid": { "type": "string" },
+        "format": { "$ref": "shared.story-format.json" },
+        "format_version": { "type": "string" },
+        "start_passage": { "$ref": "shared.passage-id.json" },
+        "passage_count": { "type": "integer", "minimum": 0 },
+        "broken_link_count": { "type": "integer", "minimum": 0 },
+        "orphan_count": { "type": "integer", "minimum": 0 },
+        "image_placeholder_count": { "type": "integer", "minimum": 0 }
+      }
+    }
+  }
+}

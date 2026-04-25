@@ -10,6 +10,7 @@ The tool surface is deliberately small and verb-shaped (think UnityMCP / GodotMC
 
 - **`create_story`** — Initialise the single active story.
 - **`load_story`** — Load a .twee file from disk into the active story, replacing whatever was loaded before.
+- **`current_story_info`** — Read-only probe of session state.
 - **`create_passage`** — Add a passage to the active story.
 - **`update_passage`** — Mutate text / tags / position / size on an existing passage.
 - **`rename_passage`** — Rename a passage and rewrite every incoming link across the story atomically.
@@ -112,6 +113,25 @@ Load a .twee file from disk into the active story, replacing whatever was loaded
 ```
 
 After load, current_story_info reports the loaded story's name, IFID, and dirty=false.
+
+### `current_story_info`
+
+Read-only probe of session state. Returns { active: false } when no story is loaded, or a record describing the active story (name, format, IFID, passage count, start, last-saved path/timestamp, dirty flag). Never mutates state, never emits a clarification.
+
+**Input**
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+
+**Example**
+
+*Check what's loaded before doing anything*
+
+```json
+{}
+```
+
+Useful for the LLM to confirm it's working with the story the human expects.
 
 ### `create_passage`
 

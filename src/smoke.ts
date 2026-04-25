@@ -6,9 +6,14 @@ import { writeFile } from "node:fs/promises";
 
 import * as createStory from "./server/tools/create_story.js";
 import * as createPassage from "./server/tools/create_passage.js";
-import * as linkPassages from "./server/tools/link_passages.js";
+import * as updatePassage from "./server/tools/update_passage.js";
 import * as renamePassage from "./server/tools/rename_passage.js";
+import * as deletePassage from "./server/tools/delete_passage.js";
+import * as linkPassages from "./server/tools/link_passages.js";
+import * as setStartPassage from "./server/tools/set_start_passage.js";
 import * as listPassages from "./server/tools/list_passages.js";
+import * as getPassage from "./server/tools/get_passage.js";
+import * as validateStory from "./server/tools/validate_story.js";
 import * as saveStory from "./server/tools/save_story.js";
 import * as respondToClarification from "./server/tools/respond_to_clarification.js";
 import * as addImagePlaceholder from "./server/tools/add_image_placeholder.js";
@@ -183,7 +188,86 @@ async function main(): Promise<void> {
   ok(`guide mentions all ${TOOL_REGISTRY.length} registered tools`);
   ok(`guide size: ${guide.length} bytes`);
 
-  section("13. Clarification path: save_story without output_dir");
+  section("13. get_passage — full passage read");
+  const g1 = await getPassage.handler({ name: "Lockpick" }) as {
+    kind: string;
+    passage: { name: string; text: string; outgoing_links: Array<{ to_passage: string }> };
+  };
+  if (g1.kind !== "ok" || g1.passage.name !== "Lockpick") fail("get_passage did not return Lockpick");
+  ok(`returned passage "${g1.passage.name}" with ${g1.passage.text.length} chars of text`);
+
+  section("14. get_passage — clarification on unknown name lists existing passages");
+  const gMiss = await getPassage.handler({ name: "NoSuchPassage" });
+  if (!isClarification(gMiss)) fail("expected clarification for unknown passage");
+  if (!(gMiss.clarification.valid_answers?.includes("Start") ?? false)) fail("valid_answers should include existing passage names");
+  ok(`server asked; valid answers include existing passages: ${JSON.stringify(gMiss.clarification.valid_answers)}`);
+
+  section("15. update_passage — rewrite Kick Door's text and tag it");
+  const upd = await updatePassage.handler({
+    name: "Kick Door",
+    text: "You kick it open with a splintering crash.",
+    tags: ["violent"],
+  }) as { kind: string; fields_changed: string[]; passage: { text: string; tags: string[] } };
+  if (upd.kind !== "ok") fail("update_passage failed");
+  if (!upd.fields_changed.includes("text") || !upd.fields_changed.includes("tags")) {
+    fail(`fields_changed should include text and tags, got ${JSON.stringify(upd.fields_changed)}`);
+  }
+  if (!upd.passage.tags.includes("violent")) fail("tag not applied");
+  ok(`updated; fields_changed=${JSON.stringify(upd.fields_changed)}, tags=${JSON.stringify(upd.passage.tags)}`);
+
+  section("16. set_start_passage — flip to Lockpick and back to Start");
+  const setA = await setStartPassage.handler({ name: "Lockpick" }) as { kind: string; previous_start: string | null; current_start: string };
+  if (setA.kind !== "ok" || setA.previous_start !== "Start" || setA.current_start !== "Lockpick") {
+    fail(`set_start to Lockpick unexpected: ${JSON.stringify(setA)}`);
+  }
+  ok(`start moved: previous=${setA.previous_start}, current=${setA.current_start}`);
+  const setB = await setStartPassage.handler({ name: "Start" }) as { kind: string; current_start: string };
+  if (setB.kind !== "ok" || setB.current_start !== "Start") fail("set_start back to Start failed");
+  ok(`restored start to ${setB.current_start}`);
+
+  section("17. delete_passage — incoming-link clarification + remove_link_markup");
+  const del1 = await deletePassage.handler({ name: "Kick Door" });
+  if (!isClarification(del1)) fail("expected clarification when deleting a linked-to passage");
+  if (!(del1.clarification.valid_answers?.includes("remove_link_markup") ?? false)) fail("valid_answers should offer remove_link_markup");
+  ok(`server asked: "${del1.clarification.question}"`);
+  const delResolved = await respondToClarification.handler({
+    clarification_id: del1.clarification.clarification_id,
+    answer: "remove_link_markup",
+  }) as {
+    kind: string;
+    deleted: boolean;
+    incoming_links_handled: { strategy: string; count: number; affected: string[] };
+  };
+  if (delResolved.kind !== "ok" || !delResolved.deleted) fail("delete did not complete");
+  if (delResolved.incoming_links_handled.count !== 1) fail(`expected 1 incoming link handled, got ${delResolved.incoming_links_handled.count}`);
+  ok(`deleted; ${delResolved.incoming_links_handled.count} incoming link(s) stripped from ${JSON.stringify(delResolved.incoming_links_handled.affected)}`);
+
+  const lst3 = await listPassages.handler({ include_text: true }) as {
+    passage_count: number;
+    passages: Array<{ name: string; text?: string; outgoing_links: Array<{ to_passage: string }> }>;
+  };
+  if (lst3.passage_count !== 2) fail(`expected 2 passages remaining, got ${lst3.passage_count}`);
+  const startP2 = lst3.passages.find((p) => p.name === "Start");
+  if (startP2 === undefined || startP2.text?.includes("Kick Door") === true) fail("Start still references Kick Door after removal");
+  ok(`2 passages remain; Start no longer links to Kick Door`);
+
+  section("18. validate_story — clean graph after all mutations");
+  const v = await validateStory.handler() as {
+    kind: string;
+    ok: boolean;
+    broken_links: unknown[];
+    orphans: string[];
+    duplicate_names: string[];
+    ifid_valid: boolean;
+    start_passage_valid: boolean;
+  };
+  if (v.kind !== "ok" || !v.ok) fail(`validate_story reported issues: ${JSON.stringify(v)}`);
+  if (v.broken_links.length !== 0) fail(`expected 0 broken links, got ${v.broken_links.length}`);
+  if (v.orphans.length !== 0) fail(`expected 0 orphans, got ${JSON.stringify(v.orphans)}`);
+  if (!v.ifid_valid || !v.start_passage_valid) fail("IFID or start_passage invalid");
+  ok(`validate_story: ok=true, broken=0, orphans=0, duplicates=0, ifid_valid, start_passage_valid`);
+
+  section("19. Clarification path: save_story without output_dir");
   const c3 = await saveStory.handler({});
   if (!isClarification(c3)) fail("expected clarification for missing output_dir");
   ok(`server asked: "${c3.clarification.question}"`);

@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { insertLink } from "../../graph/link.js";
-import { requireActiveStory } from "../state.js";
+import { requireActiveStory, setDirty } from "../state.js";
 import { ClarificationResponse, needClarification } from "../clarification.js";
 
 export const description =
@@ -79,6 +79,8 @@ export async function handler(args: LinkArgs): Promise<object | ClarificationRes
     args.display_text ?? null,
     args.insertion_index ?? null,
   );
+
+  setDirty();
 
   return {
     kind: "ok",

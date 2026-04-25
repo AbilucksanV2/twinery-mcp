@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { renamePassage } from "../../graph/rename.js";
-import { requireActiveStory } from "../state.js";
+import { requireActiveStory, setDirty } from "../state.js";
 
 export const description =
   "Rename a passage and rewrite every incoming link across the story atomically. Updates the story's start passage if the renamed passage was the start. This is the flagship graph-integrity operation — never rewrite passage names by editing raw text.";
@@ -23,6 +23,7 @@ type RenameArgs = z.infer<z.ZodObject<typeof inputSchema>>;
 export async function handler(args: RenameArgs): Promise<object> {
   const { story } = requireActiveStory();
   const result = renamePassage(story, args.old_name, args.new_name);
+  setDirty();
   return {
     kind: "ok",
     renamed: result.renamed,

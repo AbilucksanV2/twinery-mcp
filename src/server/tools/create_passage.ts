@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { newPassage } from "../../twine/adapter.js";
-import { requireActiveStory } from "../state.js";
+import { requireActiveStory, setDirty } from "../state.js";
 import { ClarificationResponse, needClarification } from "../clarification.js";
 
 export const description =
@@ -74,6 +74,8 @@ export async function handler(args: CreatePassageArgs): Promise<object | Clarifi
 
   const shouldBeStart = args.set_as_start === true || story.start === "";
   if (shouldBeStart) story.start = args.name;
+
+  setDirty();
 
   return {
     kind: "ok",

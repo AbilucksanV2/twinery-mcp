@@ -8,7 +8,7 @@ import {
   nextAvailableSuffix,
   validateLabel,
 } from "../../images/placeholder.js";
-import { requireActiveStory } from "../state.js";
+import { requireActiveStory, setDirty } from "../state.js";
 import { ClarificationResponse, needClarification } from "../clarification.js";
 
 export const description =
@@ -100,6 +100,8 @@ export async function handler(args: Args): Promise<object | ClarificationRespons
     insertionIndex: args.insertion_index ?? null,
   });
   imagePlaceholders.push(record);
+
+  setDirty();
 
   const pathIsFinal = lastSavedPath !== null;
   const expectedPath = pathIsFinal

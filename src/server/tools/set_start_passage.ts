@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { requireActiveStory } from "../state.js";
+import { requireActiveStory, setDirty } from "../state.js";
 import { ClarificationResponse, needClarification } from "../clarification.js";
 
 export const description =
@@ -36,7 +36,10 @@ export async function handler(args: Args): Promise<object | ClarificationRespons
     );
   }
   const previous = story.start === "" ? null : story.start;
-  story.start = args.name;
+  if (previous !== args.name) {
+    story.start = args.name;
+    setDirty();
+  }
   return {
     kind: "ok",
     previous_start: previous,

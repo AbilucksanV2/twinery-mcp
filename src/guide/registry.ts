@@ -1,6 +1,7 @@
 import type { ZodRawShape } from "zod";
 
 import * as createStory from "../server/tools/create_story.js";
+import * as loadStory from "../server/tools/load_story.js";
 import * as createPassage from "../server/tools/create_passage.js";
 import * as updatePassage from "../server/tools/update_passage.js";
 import * as renamePassage from "../server/tools/rename_passage.js";
@@ -50,6 +51,7 @@ function bind(name: string, mod: ToolModule): ToolMetadata {
 
 export const TOOL_REGISTRY: ToolMetadata[] = [
   bind("create_story", createStory as unknown as ToolModule),
+  bind("load_story", loadStory as unknown as ToolModule),
   bind("create_passage", createPassage as unknown as ToolModule),
   bind("update_passage", updatePassage as unknown as ToolModule),
   bind("rename_passage", renamePassage as unknown as ToolModule),

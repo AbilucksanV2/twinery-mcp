@@ -9,6 +9,7 @@ Every tool below is callable from any MCP-compliant client over stdio. The serve
 The tool surface is deliberately small and verb-shaped (think UnityMCP / GodotMCP patterns):
 
 - **`create_story`** — Initialise the single active story.
+- **`load_story`** — Load a .twee file from disk into the active story, replacing whatever was loaded before.
 - **`create_passage`** — Add a passage to the active story.
 - **`update_passage`** — Mutate text / tags / position / size on an existing passage.
 - **`rename_passage`** — Rename a passage and rewrite every incoming link across the story atomically.
@@ -83,6 +84,34 @@ Initialise the single active story. Asks for the story format if omitted (no sil
 ```
 
 If you omit `format`, the server will surface a clarification instead of picking a default.
+
+### `load_story`
+
+Load a .twee file from disk into the active story, replacing whatever was loaded before. Refuses if the active story has unsaved changes (pass discard_unsaved: true to override). Runs validation on load and includes any issues in the response — load is non-blocking on validation problems so authors can load broken stories specifically to fix them.
+
+**Input**
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `path` | string | yes | — |
+| `discard_unsaved` | boolean | no | — |
+
+**Surfaces a clarification when:**
+
+- active story has unsaved changes AND discard_unsaved is not set: ask save_first | discard_unsaved | cancel.
+- path ends in .html: ask cancel (only .twee is parsed in this version) — extract Twee and retry, or cancel.
+
+**Example**
+
+*Resume work on a saved story*
+
+```json
+{
+  "path": "./stories/locked-door/locked-door.twee"
+}
+```
+
+After load, current_story_info reports the loaded story's name, IFID, and dirty=false.
 
 ### `create_passage`
 

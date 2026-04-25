@@ -13,14 +13,24 @@ interface ActiveStory {
   story: Story;
   slug: string;
   format: StoryFormat;
-  lastSavedDir: string | null;
+  lastSavedPath: string | null;
+  lastSavedAt: number | null;
+  dirty: boolean;
   imagePlaceholders: ImagePlaceholderRecord[];
 }
 
 let active: ActiveStory | null = null;
 
 export function setActiveStory(story: Story, slug: string, format: StoryFormat): void {
-  active = { story, slug, format, lastSavedDir: null, imagePlaceholders: [] };
+  active = {
+    story,
+    slug,
+    format,
+    lastSavedPath: null,
+    lastSavedAt: null,
+    dirty: false,
+    imagePlaceholders: [],
+  };
 }
 
 export function getActiveStory(): ActiveStory | null {
@@ -34,9 +44,25 @@ export function requireActiveStory(): ActiveStory {
   return active;
 }
 
-export function setLastSavedDir(dir: string): void {
+export function setDirty(): void {
   if (active !== null) {
-    active.lastSavedDir = dir;
+    active.dirty = true;
+  }
+}
+
+export function markSaved(dir: string): void {
+  if (active !== null) {
+    active.lastSavedPath = dir;
+    active.lastSavedAt = Date.now();
+    active.dirty = false;
+  }
+}
+
+export function markLoaded(dir: string): void {
+  if (active !== null) {
+    active.lastSavedPath = dir;
+    active.lastSavedAt = Date.now();
+    active.dirty = false;
   }
 }
 

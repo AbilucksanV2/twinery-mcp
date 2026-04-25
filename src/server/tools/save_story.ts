@@ -2,7 +2,7 @@ import { z } from "zod";
 import { access, mkdir, writeFile } from "node:fs/promises";
 import { isAbsolute, join, resolve } from "node:path";
 import { emitHtml, emitTwee } from "../../twine/adapter.js";
-import { requireActiveStory, setLastSavedDir } from "../state.js";
+import { markSaved, requireActiveStory } from "../state.js";
 import { ClarificationResponse, needClarification } from "../clarification.js";
 
 export const description =
@@ -64,7 +64,7 @@ export async function handler(args: SaveArgs): Promise<object | ClarificationRes
   const assetsDir = join(dir, "assets", slug);
   await mkdir(assetsDir, { recursive: true });
 
-  setLastSavedDir(dir);
+  markSaved(dir);
 
   const pending: Array<{ label: string; expected_path: string }> = [];
   for (const ph of imagePlaceholders) {

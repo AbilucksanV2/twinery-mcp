@@ -267,10 +267,12 @@ async function main(): Promise<void> {
   if (!v.ifid_valid || !v.start_passage_valid) fail("IFID or start_passage invalid");
   ok(`validate_story: ok=true, broken=0, orphans=0, duplicates=0, ifid_valid, start_passage_valid`);
 
-  section("19. Clarification path: save_story without output_dir");
-  const c3 = await saveStory.handler({});
-  if (!isClarification(c3)) fail("expected clarification for missing output_dir");
-  ok(`server asked: "${c3.clarification.question}"`);
+  section("19. save_story without output_dir reuses the remembered path");
+  const sFinal = await saveStory.handler({}) as { kind: string; output_dir: string; used_remembered_path: boolean };
+  if (sFinal.kind !== "ok") fail("expected save_story to succeed via remembered path: " + JSON.stringify(sFinal));
+  if (sFinal.used_remembered_path !== true) fail("expected used_remembered_path=true");
+  ok(`re-saved to remembered path (used_remembered_path=${sFinal.used_remembered_path})`);
+  await rm(sFinal.output_dir, { recursive: true, force: true });
 
   console.log("\n==========================");
   console.log("ALL SMOKE CHECKS PASSED ✓");

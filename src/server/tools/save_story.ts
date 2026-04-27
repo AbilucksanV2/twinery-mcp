@@ -2,14 +2,14 @@ import { z } from "zod";
 import { access, mkdir, writeFile } from "node:fs/promises";
 import { isAbsolute, join, resolve } from "node:path";
 import { emitHtml, emitTwee } from "../../twine/adapter.js";
-import { markSaved, requireActiveStory } from "../state.js";
+import { getActiveStory, markSaved, requireActiveStory } from "../state.js";
 import { ClarificationResponse, needClarification } from "../clarification.js";
 
 export const description =
-  "Persist the active story as <slug>.twee and <slug>.html into a directory, plus a sibling assets/<slug>/ drop zone. Reports every image placeholder whose file is not yet on disk. Asks for the output folder when omitted.";
+  "Persist the active story as <slug>.twee and <slug>.html into a directory, plus a sibling assets/<slug>/ drop zone. Reports every image placeholder whose file is not yet on disk. Defaults output_dir to the active story's last-saved location (set by an earlier save_story or load_story); asks only when no remembered path is available.";
 
 export const clarificationTriggers: string[] = [
-  "output_dir missing: ask for the destination folder (free-form).",
+  "output_dir missing AND no last-saved path remembered: ask for the destination folder (free-form).",
 ];
 
 export const example = {
@@ -27,28 +27,37 @@ export const inputSchema = {
 type SaveArgs = z.infer<z.ZodObject<typeof inputSchema>>;
 
 export async function handler(args: SaveArgs): Promise<object | ClarificationResponse> {
-  if (args.output_dir === undefined || args.output_dir === "") {
-    return needClarification(
-      "save_story",
-      args as Record<string, unknown>,
-      "Where should the story be saved? Provide a folder path (absolute, or relative to the current working directory).",
-      {
-        free_text_allowed: true,
-        replay: async (merged) => {
-          const answer = String(merged.answer ?? "");
-          if (answer === "") throw new Error("Empty folder path");
-          return handler({ ...args, output_dir: answer });
+  const explicit = args.output_dir !== undefined && args.output_dir !== "";
+  let chosenDir: string;
+  let usedRemembered = false;
+
+  if (explicit) {
+    chosenDir = args.output_dir!;
+  } else {
+    const remembered = getActiveStory()?.lastSavedPath ?? null;
+    if (remembered === null) {
+      return needClarification(
+        "save_story",
+        args as Record<string, unknown>,
+        "Where should the story be saved? Provide a folder path (absolute, or relative to the current working directory).",
+        {
+          free_text_allowed: true,
+          replay: async (merged) => {
+            const answer = String(merged.answer ?? "");
+            if (answer === "") throw new Error("Empty folder path");
+            return handler({ ...args, output_dir: answer });
+          },
         },
-      },
-    );
+      );
+    }
+    chosenDir = remembered;
+    usedRemembered = true;
   }
 
   const active = requireActiveStory();
   const { story, slug, imagePlaceholders } = active;
 
-  const dir = isAbsolute(args.output_dir)
-    ? args.output_dir
-    : resolve(process.cwd(), args.output_dir);
+  const dir = isAbsolute(chosenDir) ? chosenDir : resolve(process.cwd(), chosenDir);
   await mkdir(dir, { recursive: true });
 
   const tweePath = join(dir, `${slug}.twee`);
@@ -77,6 +86,8 @@ export async function handler(args: SaveArgs): Promise<object | ClarificationRes
 
   return {
     kind: "ok",
+    output_dir: dir,
+    used_remembered_path: usedRemembered,
     written_files: written,
     assets_dir: assetsDir,
     pending_image_drops: pending,

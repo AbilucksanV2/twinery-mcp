@@ -397,7 +397,7 @@ Server reports e.g. assets/<story-slug>/ancient-tree.png — drop a file there a
 
 ### `save_story`
 
-Persist the active story as <slug>.twee and <slug>.html into a directory, plus a sibling assets/<slug>/ drop zone. Reports every image placeholder whose file is not yet on disk. Asks for the output folder when omitted.
+Persist the active story as <slug>.twee and <slug>.html into a directory, plus a sibling assets/<slug>/ drop zone. Reports every image placeholder whose file is not yet on disk. Defaults output_dir to the active story's last-saved location (set by an earlier save_story or load_story); asks only when no remembered path is available.
 
 **Input**
 
@@ -408,7 +408,7 @@ Persist the active story as <slug>.twee and <slug>.html into a directory, plus a
 
 **Surfaces a clarification when:**
 
-- output_dir missing: ask for the destination folder (free-form).
+- output_dir missing AND no last-saved path remembered: ask for the destination folder (free-form).
 
 **Example**
 

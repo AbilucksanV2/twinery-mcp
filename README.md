@@ -3,24 +3,28 @@
 **Proof-of-concept** MCP (Model Context Protocol) server that lets an LLM drive the
 authoring of branching [Twine 2](https://twinery.org/) interactive-fiction stories.
 
-This is a POC — v0.3 of the [full v1.0 plan](specs/001-mcp-server-mvp/plan.md) —
-covering branching-story authoring, the full edit/delete/validate surface, image
-placeholders, and an LLM-facing guide resource. It exists to prove that you can
-attach this server to any MCP-compliant client, ask the LLM to build and refine
-an illustrated branching story, and end up with a Twine-compatible file you can
-open in the native Twine 2 editor.
+This is a POC — v0.4 of the [full v1.0 plan](specs/001-mcp-server-mvp/plan.md) —
+covering branching-story authoring with the full edit/delete/validate surface,
+image placeholders, an LLM-facing guide resource, and the open / inspect / save
+loop (load_story, current_story_info, dirty-flag tracking). It exists to prove
+that you can attach this server to any MCP-compliant client, ask the LLM to
+build and iterate on an illustrated branching story across sessions, and end
+up with a Twine-compatible file you can open in the native Twine 2 editor.
 
 **For the full v1.0 scope** (drift gates, cross-platform install scripts,
 multi-format story testing, automated tests, CI, MCP elicitation) see
-[`specs/001-mcp-server-mvp/`](specs/001-mcp-server-mvp/).
+[`specs/001-mcp-server-mvp/`](specs/001-mcp-server-mvp/) and the roadmap at
+[`specs/001-mcp-server-mvp/roadmap.md`](specs/001-mcp-server-mvp/roadmap.md).
 
-## What's in v0.3
+## What's in v0.4
 
-**13 MCP tools**:
+**15 MCP tools**:
 
 | Tool | Purpose |
 |------|---------|
 | `create_story` | Start a new story (name + format). Asks for the format if you omit it — no silent defaults. Auto-generates a spec-valid IFID. |
+| `load_story` | Load a `.twee` file from disk into the active story. Refuses to clobber unsaved changes (clarification offers save / discard / cancel). Validates on load and reports issues without blocking. |
+| `current_story_info` | Read-only state probe — name, format, IFID, passage count, start, last-saved path, last-saved-at, dirty flag. Returns `{ active: false }` when no story is loaded. |
 | `create_passage` | Add a passage. First one becomes the start unless told otherwise. Auto-positions on the Twine canvas. |
 | `update_passage` | Mutate text / tags / position / size on an existing passage. Does NOT rename (use `rename_passage` for that so link integrity is enforced). |
 | `rename_passage` | Rename a passage and rewrite every `[[...]]` reference to it across the whole story atomically. Also updates the story's start passage if needed. |
@@ -31,7 +35,7 @@ multi-format story testing, automated tests, CI, MCP elicitation) see
 | `get_passage` | Read-only full passage dump including text and outgoing links. |
 | `validate_story` | Integrity sweep: broken links, orphans, duplicate names, IFID shape, start-passage validity. |
 | `add_image_placeholder` | Mark a spot in a passage for an image and report the exact file path + filename the author must drop. |
-| `save_story` | Write `<slug>.twee` and `<slug>.html` into a folder, plus a sibling `assets/<slug>/` drop zone. Reports any image placeholder whose file is still missing. |
+| `save_story` | Write `<slug>.twee` and `<slug>.html` into a folder, plus a sibling `assets/<slug>/` drop zone. Defaults `output_dir` to the active story's last-saved (or last-loaded) path; asks only when nothing is remembered. Reports any image placeholder whose file is still missing. |
 | `respond_to_clarification` | Resolve any question the server asked during another tool call (needed when your MCP client doesn't support MCP elicitation). |
 
 **1 MCP resource**:
@@ -157,9 +161,10 @@ npm run smoke
 
 This runs a scripted session that exercises every tool (including the
 clarification paths on unknown names and incoming-link handling, image
-placeholders with label collisions, and the guide generator) and asserts the
-output files are well-formed Twine content. On success you'll see 19 green
-checks.
+placeholders with label collisions, the guide generator, dirty-flag tracking
+across mutations, and a save → mutate → load round-trip with the dirty-clobber
+clarification) and asserts the output files are well-formed Twine content.
+On success you'll see 24 green checks.
 
 ## Known POC limitations (compared to v1.0)
 

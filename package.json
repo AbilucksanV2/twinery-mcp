@@ -1,7 +1,7 @@
 {
   "name": "twinery-mcp-poc",
-  "version": "0.3.0",
-  "description": "POC of an MCP server that lets an LLM author branching Twine 2 stories — 13-tool authoring surface (create / update / rename / delete / link / validate / image placeholders) plus an LLM-facing guide resource. See specs/001-mcp-server-mvp/ for the full v1.0 plan.",
+  "version": "0.4.0",
+  "description": "POC of an MCP server that lets an LLM author and iterate on branching Twine 2 stories — 15-tool authoring surface with the open / inspect / save loop (load_story, current_story_info, dirty-flag tracking) plus image placeholders and an LLM-facing guide resource. See specs/001-mcp-server-mvp/ for the full v1.0 plan.",
   "type": "module",
   "bin": {
     "twinery-mcp-poc": "./dist/server/index.js"

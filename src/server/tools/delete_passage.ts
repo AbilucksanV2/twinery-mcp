@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { requireActiveStory } from "../state.js";
+import { requireActiveStory, setDirty } from "../state.js";
 import { incomingTo, removeIncomingLinkMarkup } from "../../graph/links.js";
 import { ClarificationResponse, needClarification } from "../clarification.js";
 
@@ -117,6 +117,8 @@ export async function handler(args: Args): Promise<object | ClarificationRespons
       imagePlaceholders.splice(i, 1);
     }
   }
+
+  setDirty();
 
   return {
     kind: "ok",

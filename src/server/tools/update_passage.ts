@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { requireActiveStory } from "../state.js";
+import { requireActiveStory, setDirty } from "../state.js";
 import { ClarificationResponse, needClarification } from "../clarification.js";
 
 export const description =
@@ -64,6 +64,8 @@ export async function handler(args: Args): Promise<object | ClarificationRespons
     changed.push("size");
   }
   passage.metadata = meta;
+
+  if (changed.length > 0) setDirty();
 
   return {
     kind: "ok",

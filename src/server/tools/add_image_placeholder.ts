@@ -8,7 +8,7 @@ import {
   nextAvailableSuffix,
   validateLabel,
 } from "../../images/placeholder.js";
-import { requireActiveStory } from "../state.js";
+import { requireActiveStory, setDirty } from "../state.js";
 import { ClarificationResponse, needClarification } from "../clarification.js";
 
 export const description =
@@ -38,7 +38,7 @@ type Args = z.infer<z.ZodObject<typeof inputSchema>>;
 
 export async function handler(args: Args): Promise<object | ClarificationResponse> {
   const active = requireActiveStory();
-  const { story, slug, imagePlaceholders, lastSavedDir } = active;
+  const { story, slug, imagePlaceholders, lastSavedPath } = active;
 
   if (story.getPassageByName(args.passage_name) === null) {
     return needClarification(
@@ -101,9 +101,11 @@ export async function handler(args: Args): Promise<object | ClarificationRespons
   });
   imagePlaceholders.push(record);
 
-  const pathIsFinal = lastSavedDir !== null;
+  setDirty();
+
+  const pathIsFinal = lastSavedPath !== null;
   const expectedPath = pathIsFinal
-    ? join(lastSavedDir!, record.expectedPathRelative)
+    ? join(lastSavedPath!, record.expectedPathRelative)
     : record.expectedPathRelative;
 
   return {

@@ -9,6 +9,8 @@ Every tool below is callable from any MCP-compliant client over stdio. The serve
 The tool surface is deliberately small and verb-shaped (think UnityMCP / GodotMCP patterns):
 
 - **`create_story`** — Initialise the single active story.
+- **`load_story`** — Load a .twee file from disk into the active story, replacing whatever was loaded before.
+- **`current_story_info`** — Read-only probe of session state.
 - **`create_passage`** — Add a passage to the active story.
 - **`update_passage`** — Mutate text / tags / position / size on an existing passage.
 - **`rename_passage`** — Rename a passage and rewrite every incoming link across the story atomically.
@@ -83,6 +85,53 @@ Initialise the single active story. Asks for the story format if omitted (no sil
 ```
 
 If you omit `format`, the server will surface a clarification instead of picking a default.
+
+### `load_story`
+
+Load a .twee file from disk into the active story, replacing whatever was loaded before. Refuses if the active story has unsaved changes (pass discard_unsaved: true to override). Runs validation on load and includes any issues in the response — load is non-blocking on validation problems so authors can load broken stories specifically to fix them.
+
+**Input**
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `path` | string | yes | — |
+| `discard_unsaved` | boolean | no | — |
+
+**Surfaces a clarification when:**
+
+- active story has unsaved changes AND discard_unsaved is not set: ask save_first | discard_unsaved | cancel.
+- path ends in .html: ask cancel (only .twee is parsed in this version) — extract Twee and retry, or cancel.
+
+**Example**
+
+*Resume work on a saved story*
+
+```json
+{
+  "path": "./stories/locked-door/locked-door.twee"
+}
+```
+
+After load, current_story_info reports the loaded story's name, IFID, and dirty=false.
+
+### `current_story_info`
+
+Read-only probe of session state. Returns { active: false } when no story is loaded, or a record describing the active story (name, format, IFID, passage count, start, last-saved path/timestamp, dirty flag). Never mutates state, never emits a clarification.
+
+**Input**
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+
+**Example**
+
+*Check what's loaded before doing anything*
+
+```json
+{}
+```
+
+Useful for the LLM to confirm it's working with the story the human expects.
 
 ### `create_passage`
 
@@ -348,7 +397,7 @@ Server reports e.g. assets/<story-slug>/ancient-tree.png — drop a file there a
 
 ### `save_story`
 
-Persist the active story as <slug>.twee and <slug>.html into a directory, plus a sibling assets/<slug>/ drop zone. Reports every image placeholder whose file is not yet on disk. Asks for the output folder when omitted.
+Persist the active story as <slug>.twee and <slug>.html into a directory, plus a sibling assets/<slug>/ drop zone. Reports every image placeholder whose file is not yet on disk. Defaults output_dir to the active story's last-saved location (set by an earlier save_story or load_story); asks only when no remembered path is available.
 
 **Input**
 
@@ -359,7 +408,7 @@ Persist the active story as <slug>.twee and <slug>.html into a directory, plus a
 
 **Surfaces a clarification when:**
 
-- output_dir missing: ask for the destination folder (free-form).
+- output_dir missing AND no last-saved path remembered: ask for the destination folder (free-form).
 
 **Example**
 

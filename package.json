@@ -13,7 +13,8 @@
     "smoke:stdio": "cross-env SMOKE_TRANSPORT=stdio node dist/smoke.js",
     "smoke:http": "cross-env SMOKE_TRANSPORT=http node dist/smoke.js",
     "smoke:cli": "node dist/smoke_cli.js",
-    "smoke": "npm run smoke:stdio && npm run smoke:http && npm run smoke:cli",
+    "fixtures": "node dist/fixtures.js",
+    "smoke": "npm run smoke:stdio && npm run smoke:http && npm run smoke:cli && npm run fixtures",
     "guide:generate": "node dist/guide/generate.js"
   },
   "license": "MIT",

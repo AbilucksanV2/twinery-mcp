@@ -1,0 +1,37 @@
+:: StoryTitle
+The Locked Cellar (SugarCube)
+
+:: StoryData
+{
+  "ifid": "8B1C3189-E26F-469C-A2D8-52D13B08E6C8",
+  "format": "SugarCube",
+  "format-version": "2.36.1",
+  "start": "Start",
+  "tag-colors": {"ending": "red"},
+  "zoom": 1
+}
+
+:: UserStylesheet [stylesheet]
+.passage { background: #fef; padding: 1em; }
+
+:: UserScript [script]
+setup.fixtureToken = "sugarcube-fixture-v1";
+
+:: Start
+<<set $hasKey to false>>
+You stand before a heavy oak door.
+[[Search the floor|Search]]
+[[Try the handle|Try Handle]]
+
+:: Search
+<<set $hasKey to true>>
+A small iron key glints among the leaves.
+[[Take it and try the door|Try Handle]]
+
+:: Try Handle
+<<if $hasKey>>The key turns smoothly. The door swings open.
+[[Step inside|Cellar]]<<else>>The handle won't budge.
+[[Search the floor|Search]]<</if>>
+
+:: Cellar [ending]
+A cool cellar greets you. ''The end.''

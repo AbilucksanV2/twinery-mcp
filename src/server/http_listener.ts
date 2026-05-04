@@ -72,8 +72,14 @@ export async function startHttpServer(
           };
           const mcpServer = await buildServer();
           await mcpServer.connect(transport);
+        } else if (sessionIdStr !== undefined) {
+          // Session id provided but unknown to this process (typical after a
+          // server restart). Spec-canonical signal: 404 Not Found. Well-behaved
+          // clients should drop the stale session and reinitialize.
+          writeJsonRpcError(res, 404, "Session not found; reinitialize");
+          return;
         } else {
-          writeJsonRpcError(res, 400, "Bad Request: missing or unknown session id, and body is not an initialize request");
+          writeJsonRpcError(res, 400, "Bad Request: missing session id and body is not an initialize request");
           return;
         }
 
@@ -86,7 +92,11 @@ export async function startHttpServer(
         await transports.get(sessionIdStr)!.handleRequest(req, res);
         return;
       }
-      writeJsonRpcError(res, 400, "Bad Request: missing or unknown session id");
+      if (sessionIdStr !== undefined) {
+        writeJsonRpcError(res, 404, "Session not found; reinitialize");
+        return;
+      }
+      writeJsonRpcError(res, 400, "Bad Request: missing session id");
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
       console.error(`[twinery-mcp-poc] http request error: ${message}`);

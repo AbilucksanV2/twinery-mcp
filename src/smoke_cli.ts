@@ -205,6 +205,43 @@ async function main(): Promise<void> {
     await first.kill();
   }
 
+  // T013b — stale session id (server restart simulation) returns 404 not 400
+  section("T013b. POST with unknown mcp-session-id returns 404 (post-restart recovery signal)");
+  const sessPort = await findFreePort();
+  const sessServer = await spawnServerAndAwaitListen(["--transport", "http", "--port", String(sessPort)], { expectPort: sessPort });
+  try {
+    // Bogus session id, non-initialize body → expect 404.
+    const stale = await fetch(`http://127.0.0.1:${sessPort}/mcp`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "accept": "application/json, text/event-stream",
+        "mcp-session-id": "00000000-0000-0000-0000-000000000000",
+      },
+      body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/list", params: {} }),
+    });
+    if (stale.status !== 404) fail(`stale session id: expected 404, got ${stale.status}`);
+    const staleBody = await stale.json() as { error?: { message?: string } };
+    if (!(staleBody.error?.message ?? "").toLowerCase().includes("session")) {
+      fail(`stale session id: response body should mention session; got ${JSON.stringify(staleBody)}`);
+    }
+    ok(`stale session id → 404 + JSON-RPC error referencing session`);
+
+    // No session id, non-initialize body → expect 400 (existing behavior preserved).
+    const missing = await fetch(`http://127.0.0.1:${sessPort}/mcp`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "accept": "application/json, text/event-stream",
+      },
+      body: JSON.stringify({ jsonrpc: "2.0", id: 2, method: "tools/list", params: {} }),
+    });
+    if (missing.status !== 400) fail(`missing session id: expected 400, got ${missing.status}`);
+    ok(`missing session id (no header) → 400 (existing behavior preserved)`);
+  } finally {
+    await sessServer.kill();
+  }
+
   // T014 — invalid --transport variants
   section("T014. Invalid --transport values exit 2 with the invalid_transport message");
   for (const value of ["bogus", "http2", ""]) {

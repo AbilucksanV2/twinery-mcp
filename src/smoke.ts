@@ -1,6 +1,6 @@
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { join, resolve, sep } from "node:path";
 import { spawn } from "node:child_process";
 
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
@@ -238,7 +238,8 @@ async function runSmoke(adapter: SmokeAdapter): Promise<void> {
   if (img1.kind !== "ok") fail("add_image_placeholder did not return ok: " + JSON.stringify(img1));
   if (img1.expected_filename !== "brass-lock.png") fail(`expected filename brass-lock.png, got ${img1.expected_filename}`);
   if (img1.path_is_final !== false) fail("path_is_final should be false pre-save");
-  if (!img1.expected_path.includes("assets/locked-door/brass-lock.png")) fail(`expected path contains assets/locked-door/brass-lock.png, got ${img1.expected_path}`);
+  const expectedTail = ["assets", "locked-door", "brass-lock.png"].join(sep);
+  if (!img1.expected_path.includes(expectedTail)) fail(`expected path contains ${expectedTail}, got ${img1.expected_path}`);
   ok(`placeholder added; expected file: ${img1.expected_filename} at ${img1.expected_path}`);
 
   section("9. add_image_placeholder — duplicate label surfaces clarification (no silent rename)");

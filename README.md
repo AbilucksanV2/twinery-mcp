@@ -266,6 +266,19 @@ label collisions, the guide generator, dirty-flag tracking across mutations, and
 a save → mutate → load round-trip with the dirty-clobber clarification. The
 combined run completes in well under 60s on a typical dev laptop.
 
+GitHub Actions runs the same checks on every push to `main` / `dev` and on every
+pull request, across `ubuntu-latest`, `macos-latest`, and `windows-latest` on
+Node 20 LTS. The workflow also enforces three constitution gates:
+- `scripts/check-no-llm-sdk.mjs` — fails if any LLM-provider SDK appears in
+  `package.json` deps or in import statements under `src/`.
+- `scripts/check-licenses.mjs` — fails if any production dep (direct or
+  transitive) carries a license outside the allowlist (MIT, ISC, Apache-2.0,
+  BSD-2/3-Clause, MPL-2.0, BlueOak-1.0.0, 0BSD, Unlicense, CC0-1.0, CC-BY-4.0).
+- `scripts/check-guide-drift.mjs` — fails if `docs/GUIDE.md` is out of sync
+  with the registry (run `npm run guide:generate` and commit to fix).
+
+Run any of those scripts directly to reproduce the gate locally.
+
 ## Known POC limitations (compared to v1.0)
 
 - No MCP elicitation path — all clarifications come back as a

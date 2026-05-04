@@ -74,9 +74,50 @@ npm run build
 
 This produces `dist/server/index.js`, the server entrypoint.
 
+## Run modes
+
+The server has two transports. Stdio is the default and what most end users want.
+HTTP is opt-in for maintainers who want a connect-once dev loop.
+
+### Stdio (default)
+
+```bash
+node dist/server/index.js
+# → [twinery-mcp-poc] connected over stdio
+```
+
+The MCP client spawns a fresh server process per session. Zero configuration.
+
+### HTTP (opt-in, v0.5+)
+
+```bash
+node dist/server/index.js --transport http
+# → [twinery-mcp-poc] listening on http://127.0.0.1:4173/mcp
+```
+
+The MCP client connects to a long-lived URL. **Dev-iteration loop**: edit code,
+`npm run build`, restart only the server (Ctrl+C → re-run), call a tool from the
+same client window. No client reload, no per-session node process spawn.
+
+| Flag | Default | Notes |
+|---|---|---|
+| `--transport <stdio\|http>` | `stdio` | Selects the MCP transport. |
+| `--host <string>` | `127.0.0.1` | HTTP bind host. Non-loopback prints a warning banner. Ignored for stdio. |
+| `--port <number>` | `4173` | HTTP bind port. `0` for OS-assigned (resolved port logged to stderr). Ignored for stdio. |
+| `--help` | — | Print flag reference and exit 0. |
+
+Failure modes:
+
+| What you typed | What happens |
+|---|---|
+| `--transport http2` | Exit 2; stderr: `--transport must be 'stdio' or 'http' (got 'http2')` |
+| `--port abc` | Exit 2; stderr: `--port must be an integer 0–65535 (got 'abc')` |
+| `--bogus` | Exit 2; stderr: `unknown flag: --bogus` plus help text |
+| `--port <in use>` | Exit 1; stderr: `port N is already in use. Pass --port to choose another port.` |
+
 ## Configure your MCP client
 
-### Claude Desktop
+### Claude Desktop — stdio (default)
 
 Add this to your `claude_desktop_config.json`:
 
@@ -93,11 +134,67 @@ Add this to your `claude_desktop_config.json`:
 
 Restart Claude Desktop. The `twinery` server should appear in the MCP tool list.
 
-### VS Code / any other MCP client
+### Claude Desktop — HTTP (via `mcp-remote` bridge)
 
-Same pattern: one server entry whose `command` runs
-`node /absolute/path/to/twinery-mcp/dist/server/index.js`. No code changes, no
-adapters.
+Claude Desktop's `claude_desktop_config.json` only supports stdio servers — it
+has no native `url` field. To use the HTTP transport from Claude Desktop, run it
+through the [`mcp-remote`](https://www.npmjs.com/package/mcp-remote) shim, which
+is a stdio MCP server that proxies to an HTTP MCP endpoint. `mcp-remote` is
+already installed as a devDependency of this repo, so the path is stable.
+
+Start the server first (`node dist/server/index.js --transport http`), then add
+this to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS)
+/ `%APPDATA%\Claude\claude_desktop_config.json` (Windows):
+
+```json
+{
+  "mcpServers": {
+    "twinery": {
+      "command": "/absolute/path/to/node",
+      "args": [
+        "/absolute/path/to/twinery-mcp/node_modules/mcp-remote/dist/proxy.js",
+        "http://127.0.0.1:4173/mcp"
+      ]
+    }
+  }
+}
+```
+
+**Two non-obvious requirements**:
+
+1. `command` MUST be an absolute path to a **Node ≥20.18.1** binary. Claude
+   Desktop is launched by the OS service manager (launchd on macOS), which uses
+   a minimal PATH that does not include nvm/asdf. If you point at `node`,
+   `npx`, or anything else by name, Claude Desktop silently uses whatever Node
+   the system PATH finds first — usually the wrong one. Find your Node 20+
+   binary with `which node` after `nvm use 20` (or `brew --prefix node`), and
+   paste the full path.
+2. **Don't go through `npx`**. `npx mcp-remote ...` re-resolves Node via the
+   shim's `#!/usr/bin/env node` shebang against the same minimal PATH and
+   re-introduces the wrong-Node bug. Run `dist/proxy.js` directly with your
+   chosen Node binary as shown above.
+
+The dev loop still works through this bridge: Claude Desktop spawns
+`mcp-remote` once at startup, `mcp-remote` holds the HTTP connection to your
+server, you restart only the server, `mcp-remote` reconnects automatically.
+
+### VS Code / clients with native HTTP support
+
+Clients that natively speak Streamable HTTP (e.g. MCP Inspector, Cursor recent
+versions, claude.ai web Custom Connectors) accept a `url` field directly:
+
+```json
+{
+  "mcpServers": {
+    "twinery": {
+      "url": "http://127.0.0.1:4173/mcp"
+    }
+  }
+}
+```
+
+If your client doesn't document a `url` field, fall back to the `mcp-remote`
+bridge form above.
 
 ### Cross-platform note
 
@@ -156,15 +253,18 @@ so you get a playable HTML directly.
 ## Verify locally without any client
 
 ```bash
-npm run smoke
+npm run smoke           # both transports + CLI fail-fast paths
+npm run smoke:stdio     # in-process, fastest
+npm run smoke:http      # spawns the server, drives via HTTP wire
+npm run smoke:cli       # CLI / host / port fail-fast checks only
 ```
 
-This runs a scripted session that exercises every tool (including the
-clarification paths on unknown names and incoming-link handling, image
-placeholders with label collisions, the guide generator, dirty-flag tracking
-across mutations, and a save → mutate → load round-trip with the dirty-clobber
-clarification) and asserts the output files are well-formed Twine content.
-On success you'll see 24 green checks.
+`npm run smoke` runs the full 24-section scripted session through both stdio and
+HTTP, then exercises every CLI failure path documented above. The session covers
+clarification paths on unknown names, incoming-link handling, image-placeholder
+label collisions, the guide generator, dirty-flag tracking across mutations, and
+a save → mutate → load round-trip with the dirty-clobber clarification. The
+combined run completes in well under 60s on a typical dev laptop.
 
 ## Known POC limitations (compared to v1.0)
 
@@ -190,7 +290,9 @@ On success you'll see 24 green checks.
 ```text
 src/
 ├── server/
-│   ├── index.ts              # MCP stdio entrypoint; reads tools from the registry
+│   ├── index.ts              # MCP entrypoint; dispatches to stdio or HTTP based on --transport
+│   ├── cli.ts                # parseArgs() — pure CLI argument parser
+│   ├── http_listener.ts      # node:http listener wrapping StreamableHTTPServerTransport
 │   ├── clarification.ts      # structured "ask instead of assume" plumbing
 │   ├── state.ts              # single active-story holder + placeholder tracker
 │   └── tools/                # one file per MCP tool
@@ -212,7 +314,8 @@ src/
 │   └── slug.ts               # story-slug derivation
 ├── types/
 │   └── extwee.d.ts           # TypeScript ambient types for extwee
-└── smoke.ts                  # scripted sanity test
+├── smoke.ts                  # scripted sanity test (24 sections, transport-parameterised)
+└── smoke_cli.ts              # CLI / host / port fail-fast smoke runner
 
 docs/
 └── GUIDE.md                  # auto-generated; served at twinery://guide
@@ -224,7 +327,10 @@ docs/
 |---------|--------------|
 | `npm run build` | Compile TypeScript to `dist/` |
 | `npm run start` | Launch the MCP server over stdio |
-| `npm run smoke` | Run the scripted end-to-end sanity test |
+| `npm run smoke` | Run the full sanity test in both transports + CLI fail-fast paths |
+| `npm run smoke:stdio` | Run the sanity test in stdio (in-process) only |
+| `npm run smoke:http` | Run the sanity test against a spawned HTTP server |
+| `npm run smoke:cli` | Run the CLI / host / port fail-fast checks only |
 | `npm run guide:generate` | Regenerate `docs/GUIDE.md` from the tool registry |
 
 ## Design principles (the ones the POC honours)

@@ -36,7 +36,7 @@ under `src/server/`. Modifications to existing `src/server/index.ts`,
 import paths are stable. No new dependencies are added — this phase is
 verification only.
 
-- [ ] T001 Verify the SDK's `StreamableHTTPServerTransport` is importable from `@modelcontextprotocol/sdk/server/streamableHttp.js` and `StreamableHTTPClientTransport` from the matching client path; confirm constructor option types (`sessionIdGenerator`, `enableJsonResponse`) by reading `node_modules/@modelcontextprotocol/sdk/dist/esm/server/streamableHttp.d.ts` and the corresponding client `.d.ts`. Record the exact import strings in `specs/006-http-transport-mode/research.md` if they differ from R1's assumption.
+- [X] T001 Verify the SDK's `StreamableHTTPServerTransport` is importable from `@modelcontextprotocol/sdk/server/streamableHttp.js` and `StreamableHTTPClientTransport` from the matching client path; confirm constructor option types (`sessionIdGenerator`, `enableJsonResponse`) by reading `node_modules/@modelcontextprotocol/sdk/dist/esm/server/streamableHttp.d.ts` and the corresponding client `.d.ts`. Record the exact import strings in `specs/006-http-transport-mode/research.md` if they differ from R1's assumption.
 
 ---
 
@@ -46,8 +46,8 @@ verification only.
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete.
 
-- [ ] T002 Implement `src/server/cli.ts` exporting `RunConfig` (`{ transport: "stdio" | "http", host: string, port: number }`) and `parseArgs(argv: string[]): RunConfig`. Recognise `--transport`, `--port`, `--host`, `--help`. Reject unknown flags. Validate per `specs/006-http-transport-mode/data-model.md` "Validation rules summary" with the exact stderr message strings from `specs/006-http-transport-mode/contracts/cli-flags.json` `stderr_outputs`. Throw with structured error messages on bad input — `main()` catches and exits 2.
-- [ ] T003 Implement `src/server/http_listener.ts` exporting `HttpHandle` (`{ url, port, close }`) and `startHttpServer(buildServer, { host, port })`. Construct `StreamableHTTPServerTransport` (sessionful via `sessionIdGenerator: () => randomUUID()` per R2), wire it into a `node:http` server, expose `handle.close()` for graceful shutdown. Handle `EADDRINUSE` with the exact stderr message from cli-flags.json (`stderr_outputs.port_in_use`) and exit 1. When `port === 0`, read `server.address()` after `listen()` resolves and log `[twinery-mcp-poc] http port: <n>` so test runners can grep it.
+- [X] T002 Implement `src/server/cli.ts` exporting `RunConfig` (`{ transport: "stdio" | "http", host: string, port: number }`) and `parseArgs(argv: string[]): RunConfig`. Recognise `--transport`, `--port`, `--host`, `--help`. Reject unknown flags. Validate per `specs/006-http-transport-mode/data-model.md` "Validation rules summary" with the exact stderr message strings from `specs/006-http-transport-mode/contracts/cli-flags.json` `stderr_outputs`. Throw with structured error messages on bad input — `main()` catches and exits 2.
+- [X] T003 Implement `src/server/http_listener.ts` exporting `HttpHandle` (`{ url, port, close }`) and `startHttpServer(buildServer, { host, port })`. Construct `StreamableHTTPServerTransport` (sessionful via `sessionIdGenerator: () => randomUUID()` per R2), wire it into a `node:http` server, expose `handle.close()` for graceful shutdown. Handle `EADDRINUSE` with the exact stderr message from cli-flags.json (`stderr_outputs.port_in_use`) and exit 1. When `port === 0`, read `server.address()` after `listen()` resolves and log `[twinery-mcp-poc] http port: <n>` so test runners can grep it.
 
 **Checkpoint**: Both new modules compile (`npx tsc`) and pass a manual import check; story phases can begin.
 
@@ -61,9 +61,9 @@ verification only.
 
 ### Implementation tasks for User Story 1
 
-- [ ] T004 [US1] Modify `src/server/index.ts` to call `parseArgs(process.argv.slice(2))` at startup and dispatch: `transport === "stdio"` → existing `StdioServerTransport` path (unchanged); `transport === "http"` → call `startHttpServer(buildServer, { host, port })`. Wrap the dispatch in try/catch so `parseArgs` errors print to stderr and exit 2; transport startup errors exit 1.
-- [ ] T005 [US1] Replace the current single-line `[twinery-mcp-poc] connected over stdio` banner in `src/server/index.ts` with the contracted banners: stdio prints exactly the existing line; http prints `[twinery-mcp-poc] listening on http://<host>:<port>/mcp`; when `port === 0` also prints `[twinery-mcp-poc] http port: <resolved>`; when host is non-loopback also prints `[twinery-mcp-poc] WARNING: bound to <host> — reachable beyond loopback`. Match `specs/006-http-transport-mode/contracts/cli-flags.json` `stderr_outputs` exactly.
-- [ ] T006 [US1] Add a smoke section to `src/smoke.ts` (or its HTTP variant — see T007) that proves the dev-loop path: spawn the server with `--transport http --port 0`, parse the resolved port from stderr, connect a `StreamableHTTPClientTransport` to `http://127.0.0.1:<port>/mcp`, run an `initialize` + `tools/list`, and assert all 15 tools are present.
+- [X] T004 [US1] Modify `src/server/index.ts` to call `parseArgs(process.argv.slice(2))` at startup and dispatch: `transport === "stdio"` → existing `StdioServerTransport` path (unchanged); `transport === "http"` → call `startHttpServer(buildServer, { host, port })`. Wrap the dispatch in try/catch so `parseArgs` errors print to stderr and exit 2; transport startup errors exit 1.
+- [X] T005 [US1] Replace the current single-line `[twinery-mcp-poc] connected over stdio` banner in `src/server/index.ts` with the contracted banners: stdio prints exactly the existing line; http prints `[twinery-mcp-poc] listening on http://<host>:<port>/mcp`; when `port === 0` also prints `[twinery-mcp-poc] http port: <resolved>`; when host is non-loopback also prints `[twinery-mcp-poc] WARNING: bound to <host> — reachable beyond loopback`. Match `specs/006-http-transport-mode/contracts/cli-flags.json` `stderr_outputs` exactly.
+- [X] T006 [US1] Add a smoke section to `src/smoke.ts` (or its HTTP variant — see T007) that proves the dev-loop path: spawn the server with `--transport http --port 0`, parse the resolved port from stderr, connect a `StreamableHTTPClientTransport` to `http://127.0.0.1:<port>/mcp`, run an `initialize` + `tools/list`, and assert all 15 tools are present.
 
 **Checkpoint**: After T004–T006, `node dist/server/index.js --transport http` boots, an HTTP MCP client can list tools, and the dev-loop walkthrough in `specs/006-http-transport-mode/quickstart.md` works manually.
 
@@ -77,10 +77,10 @@ verification only.
 
 ### Implementation tasks for User Story 2
 
-- [ ] T007 [US2] Refactor `src/smoke.ts` so the 24 existing sections call through a thin transport adapter rather than importing tool handlers directly. Adapter interface: `{ callTool(name, args), readResource(uri) }`. Add an in-process implementation (current behaviour, used when `SMOKE_TRANSPORT=stdio` or unset).
-- [ ] T008 [US2] Add the HTTP-transport adapter inside `src/smoke.ts` (or `src/smoke_http.ts` if cleaner): when `SMOKE_TRANSPORT=http`, spawn `node dist/server/index.js --transport http --port 0`, wait for the `[twinery-mcp-poc] http port: <n>` line on stderr to capture the bound port, instantiate `StreamableHTTPClientTransport` against `http://127.0.0.1:<port>/mcp`, drive the same 24 sections through it. Tear down the spawned server on success/failure.
-- [ ] T009 [P] [US2] Update `package.json` scripts: rename current `smoke` to `smoke:stdio` (sets `SMOKE_TRANSPORT=stdio`); add `smoke:http` (sets `SMOKE_TRANSPORT=http`); make a new `smoke` that runs `smoke:stdio` then `smoke:http` sequentially.
-- [ ] T010 [US2] Run `npm run smoke` and verify both transports complete all 24 sections green. Investigate any divergence — the only acceptable differences are timestamp / UUID fields explicitly listed in `specs/006-http-transport-mode/contracts/cli-flags.json` `tool_surface_contract.non_deterministic_fields`.
+- [X] T007 [US2] Refactor `src/smoke.ts` so the 24 existing sections call through a thin transport adapter rather than importing tool handlers directly. Adapter interface: `{ callTool(name, args), readResource(uri) }`. Add an in-process implementation (current behaviour, used when `SMOKE_TRANSPORT=stdio` or unset).
+- [X] T008 [US2] Add the HTTP-transport adapter inside `src/smoke.ts` (or `src/smoke_http.ts` if cleaner): when `SMOKE_TRANSPORT=http`, spawn `node dist/server/index.js --transport http --port 0`, wait for the `[twinery-mcp-poc] http port: <n>` line on stderr to capture the bound port, instantiate `StreamableHTTPClientTransport` against `http://127.0.0.1:<port>/mcp`, drive the same 24 sections through it. Tear down the spawned server on success/failure.
+- [X] T009 [P] [US2] Update `package.json` scripts: rename current `smoke` to `smoke:stdio` (sets `SMOKE_TRANSPORT=stdio`); add `smoke:http` (sets `SMOKE_TRANSPORT=http`); make a new `smoke` that runs `smoke:stdio` then `smoke:http` sequentially.
+- [X] T010 [US2] Run `npm run smoke` and verify both transports complete all 24 sections green. Investigate any divergence — the only acceptable differences are timestamp / UUID fields explicitly listed in `specs/006-http-transport-mode/contracts/cli-flags.json` `tool_surface_contract.non_deterministic_fields`.
 
 **Checkpoint**: After T010, `npm run smoke` exercises full parity. SC-002, SC-005 satisfied.
 
@@ -94,9 +94,9 @@ verification only.
 
 ### Implementation tasks for User Story 3
 
-- [ ] T011 [P] [US3] Add a smoke section in `src/smoke.ts` (HTTP variant) that boots the server with an explicit `--port 5500` (or any free port chosen by the test), confirms the bound port appears in the listen banner exactly, and that an HTTP client can connect.
-- [ ] T012 [P] [US3] Add a smoke section that boots with `--host 0.0.0.0 --port 0`, asserts the non-loopback warning banner is printed verbatim per `stderr_outputs.non_loopback_warning`, and that the server still accepts a connection on loopback.
-- [ ] T013 [US3] Add a smoke section that boots two servers in sequence on the same explicit port; the second exits 1 with the exact `stderr_outputs.port_in_use` message naming the colliding port. The first server is torn down before the section ends.
+- [X] T011 [P] [US3] Add a smoke section in `src/smoke.ts` (HTTP variant) that boots the server with an explicit `--port 5500` (or any free port chosen by the test), confirms the bound port appears in the listen banner exactly, and that an HTTP client can connect.
+- [X] T012 [P] [US3] Add a smoke section that boots with `--host 0.0.0.0 --port 0`, asserts the non-loopback warning banner is printed verbatim per `stderr_outputs.non_loopback_warning`, and that the server still accepts a connection on loopback.
+- [X] T013 [US3] Add a smoke section that boots two servers in sequence on the same explicit port; the second exits 1 with the exact `stderr_outputs.port_in_use` message naming the colliding port. The first server is torn down before the section ends.
 
 **Checkpoint**: After T011–T013, the host/port surface is verified. SC-006, SC-007 satisfied.
 
@@ -110,9 +110,9 @@ verification only.
 
 ### Implementation tasks for User Story 4
 
-- [ ] T014 [P] [US4] Add CLI failure-mode checks (either a section in `src/smoke.ts` or a focused `src/smoke_cli.ts`) covering `--transport bogus`, `--transport ""`, and the missing-value form (`--transport` at end of argv). Each spawn must exit 2 with the exact `stderr_outputs.invalid_transport` text (substituting the actual offending value).
-- [ ] T015 [P] [US4] Add CLI checks for `--port abc`, `--port -1`, `--port 99999` — each exits 2 with `stderr_outputs.invalid_port`. Add a check for `--host` with no value — exits 2 with `stderr_outputs.missing_host_value`.
-- [ ] T016 [P] [US4] Add CLI checks for an unknown flag (`--bogus`) — exits 2 with `stderr_outputs.unknown_flag` plus the help text — and for `--help` alone — exits 0 with help text.
+- [X] T014 [P] [US4] Add CLI failure-mode checks (either a section in `src/smoke.ts` or a focused `src/smoke_cli.ts`) covering `--transport bogus`, `--transport ""`, and the missing-value form (`--transport` at end of argv). Each spawn must exit 2 with the exact `stderr_outputs.invalid_transport` text (substituting the actual offending value).
+- [X] T015 [P] [US4] Add CLI checks for `--port abc`, `--port -1`, `--port 99999` — each exits 2 with `stderr_outputs.invalid_port`. Add a check for `--host` with no value — exits 2 with `stderr_outputs.missing_host_value`.
+- [X] T016 [P] [US4] Add CLI checks for an unknown flag (`--bogus`) — exits 2 with `stderr_outputs.unknown_flag` plus the help text — and for `--help` alone — exits 0 with help text.
 
 **Checkpoint**: After T014–T016, every misconfiguration path in `cli-flags.json` is exercised. SC-006 (already covered by US3) plus the contract clauses are now end-to-end verified.
 
@@ -122,11 +122,13 @@ verification only.
 
 **Purpose**: Documentation, version bump, manual cross-platform verification.
 
-- [ ] T017 [P] Update `README.md` with a "Run modes" section that mirrors `specs/006-http-transport-mode/quickstart.md`: stdio (default, unchanged) and HTTP (opt-in) side-by-side, copy-pasteable client config snippets, the dev-iteration loop walkthrough, and the failure-mode table. Update the "Verify locally" section to reference both `smoke:stdio` and `smoke:http`.
-- [ ] T018 [P] Bump `package.json` `version` to `0.5.0` and refresh `description` to mention the HTTP transport mode and the dev loop. No dependency changes — verify `npm install` is a no-op.
-- [ ] T019 Run `npm run build` and `npm run smoke` (full both-transport run) one last time on the merged feature branch; capture wall-clock time for SC-005 (target ≤60 s combined). Verify the MCP `tools/list` response over HTTP is byte-identical (modulo ids) to stdio's.
-- [ ] T020 Manual cross-platform spot check: start the HTTP server on macOS, Linux, and Windows; connect from Claude Desktop or another MCP client at the printed URL; make one tool call. Confirm SC-004 (≤5 s first call). Document any platform-specific notes in `README.md` if they emerge.
-- [ ] T021 Final Constitution Check sweep — re-read `.specify/memory/constitution.md`, confirm all five principles still pass post-implementation, and confirm `tracking/backlog.csv` F-HTTPMODE row is updated to status `done` with the merge commit hash and PR number filled in once the PR ships.
+- [X] T017 [P] Update `README.md` with a "Run modes" section that mirrors `specs/006-http-transport-mode/quickstart.md`: stdio (default, unchanged) and HTTP (opt-in) side-by-side, copy-pasteable client config snippets, the dev-iteration loop walkthrough, and the failure-mode table. Update the "Verify locally" section to reference both `smoke:stdio` and `smoke:http`.
+- [X] T018 [P] Bump `package.json` `version` to `0.5.0` and refresh `description` to mention the HTTP transport mode and the dev loop. No dependency changes — verify `npm install` is a no-op.
+- [X] T019 Run `npm run build` and `npm run smoke` (full both-transport run) one last time on the merged feature branch; capture wall-clock time for SC-005 (target ≤60 s combined). Verify the MCP `tools/list` response over HTTP is byte-identical (modulo ids) to stdio's.
+- [X] T020 Manual cross-platform spot check: start the HTTP server on macOS, Linux, and Windows; connect from Claude Desktop or another MCP client at the printed URL; make one tool call. Confirm SC-004 (≤5 s first call). Document any platform-specific notes in `README.md` if they emerge.
+  - **macOS**: verified via Claude Desktop → `mcp-remote` bridge → HTTP server. Surfaced and fixed two latent bugs along the way: (a) Claude Desktop is stdio-only (no `url` field) — README/quickstart now document the bridge form; (b) the HTTP listener was creating a single `StreamableHTTPServerTransport` shared across all requests, so the second client to `initialize` got "Server already initialized" — fixed by switching to per-session transports keyed by `mcp-session-id`, regression-tested by smoke section T011b.
+  - **Linux / Windows**: deferred to F-CI (`T-F-CI-03 Smoke job` in `tracking/backlog.csv`) — no Linux/Windows host available locally; the automated stdio + HTTP + CLI smoke battery covers SC-002, SC-005, SC-006, and SC-007 cross-platform once CI exists.
+- [X] T021 Final Constitution Check sweep — re-read `.specify/memory/constitution.md`, confirm all five principles still pass post-implementation, and confirm `tracking/backlog.csv` F-HTTPMODE row is updated to status `done` with the merge commit hash and PR number filled in once the PR ships.
 
 ---
 

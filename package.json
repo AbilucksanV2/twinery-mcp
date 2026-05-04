@@ -1,7 +1,7 @@
 {
   "name": "twinery-mcp-poc",
-  "version": "0.4.0",
-  "description": "POC of an MCP server that lets an LLM author and iterate on branching Twine 2 stories — 15-tool authoring surface with the open / inspect / save loop (load_story, current_story_info, dirty-flag tracking) plus image placeholders and an LLM-facing guide resource. See specs/001-mcp-server-mvp/ for the full v1.0 plan.",
+  "version": "0.5.0",
+  "description": "POC of an MCP server that lets an LLM author and iterate on branching Twine 2 stories — 15-tool authoring surface with the open / inspect / save loop, image placeholders, an LLM-facing guide resource, and a CLI-flag-selectable Streamable-HTTP transport for the connect-once dev loop (stdio remains the default; --transport http opts in). See specs/001-mcp-server-mvp/ for the full v1.0 plan.",
   "type": "module",
   "bin": {
     "twinery-mcp-poc": "./dist/server/index.js"
@@ -9,7 +9,10 @@
   "scripts": {
     "build": "tsc",
     "start": "node dist/server/index.js",
-    "smoke": "node dist/smoke.js",
+    "smoke:stdio": "SMOKE_TRANSPORT=stdio node dist/smoke.js",
+    "smoke:http": "SMOKE_TRANSPORT=http node dist/smoke.js",
+    "smoke:cli": "node dist/smoke_cli.js",
+    "smoke": "npm run smoke:stdio && npm run smoke:http && npm run smoke:cli",
     "guide:generate": "node dist/guide/generate.js"
   },
   "license": "MIT",
@@ -23,6 +26,7 @@
   },
   "devDependencies": {
     "@types/node": "^20.12.0",
+    "mcp-remote": "^0.1.38",
     "typescript": "^5.4.5"
   }
 }

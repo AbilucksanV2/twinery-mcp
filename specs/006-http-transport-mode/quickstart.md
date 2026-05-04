@@ -44,7 +44,8 @@ node dist/server/index.js --transport http
 # → [twinery-mcp-poc] listening on http://127.0.0.1:4173/mcp
 ```
 
-MCP client config (Claude Desktop / VS Code MCP / any compliant client):
+MCP client config — for clients with native Streamable-HTTP support
+(MCP Inspector, Cursor recent versions, claude.ai web Custom Connectors):
 
 ```json
 {
@@ -55,6 +56,28 @@ MCP client config (Claude Desktop / VS Code MCP / any compliant client):
   }
 }
 ```
+
+For Claude Desktop (which is stdio-only and ignores `url`), bridge through
+the `mcp-remote` devDependency that ships with this repo:
+
+```json
+{
+  "mcpServers": {
+    "twinery": {
+      "command": "/absolute/path/to/node",
+      "args": [
+        "/absolute/path/to/twinery-mcp/node_modules/mcp-remote/dist/proxy.js",
+        "http://127.0.0.1:4173/mcp"
+      ]
+    }
+  }
+}
+```
+
+`command` must be an absolute path to a Node ≥20.18.1 binary — Claude Desktop's
+launchd-derived PATH does not see nvm/asdf installs. Don't go through `npx`;
+its `env node` shebang re-introduces the wrong-Node bug. See README.md
+"Claude Desktop — HTTP" for the full rationale.
 
 Now the **dev-iteration loop** is one client connect away:
 

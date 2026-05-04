@@ -452,6 +452,44 @@ async function runSmoke(adapter: SmokeAdapter): Promise<void> {
 
   await rm(tmp2, { recursive: true, force: true });
 
+  section("23b. create_story honors the dirty guard (matches load_story)");
+  // Make a mutation so dirty=true, then attempt to start a fresh story in a
+  // different format. Must surface the same save_first / discard_unsaved /
+  // cancel clarification as load_story.
+  await adapter.callTool("rename_passage", { old_name: "Beginning", new_name: "DirtyAgain" });
+  const infoBefore = await adapter.callTool("current_story_info", {}) as { dirty: boolean; format: string };
+  if (infoBefore.dirty !== true) fail("expected dirty=true before dirty-guard test");
+  ok(`pre-create_story: dirty=${infoBefore.dirty}, format=${infoBefore.format}`);
+
+  const dirtyCreate = await adapter.callTool("create_story", { name: "Format Switch Test", format: "Chapbook" });
+  if (!isClarification(dirtyCreate)) fail(`expected clarification on dirty create_story; got ${JSON.stringify(dirtyCreate).slice(0, 200)}`);
+  if (!(dirtyCreate.clarification.valid_answers?.includes("save_first") ?? false)) fail("expected save_first as valid answer");
+  if (!(dirtyCreate.clarification.valid_answers?.includes("discard_unsaved") ?? false)) fail("expected discard_unsaved as valid answer");
+  if (!(dirtyCreate.clarification.valid_answers?.includes("cancel") ?? false)) fail("expected cancel as valid answer");
+  ok(`server asked: "${dirtyCreate.clarification.question}"`);
+
+  const cResolved = await adapter.callTool("respond_to_clarification", {
+    clarification_id: dirtyCreate.clarification.clarification_id,
+    answer: "discard_unsaved",
+  }) as { kind: string; story?: { name: string; format: string }; cancelled?: boolean };
+  if (cResolved.kind !== "ok" || cResolved.story === undefined) fail(`expected ok with new story; got ${JSON.stringify(cResolved)}`);
+  if (cResolved.story.format !== "Chapbook") fail(`expected format=Chapbook on new story; got ${cResolved.story.format}`);
+  ok(`discard_unsaved created the new Chapbook story (format=${cResolved.story.format})`);
+
+  // And confirm cancel returns cancelled=true without clobbering — start by
+  // making the just-created story dirty.
+  await adapter.callTool("create_passage", { name: "Lobby", text: "A small lobby.", set_as_start: true, tags: [] });
+  const dirtyCreate2 = await adapter.callTool("create_story", { name: "Should Not Replace", format: "Snowman" });
+  if (!isClarification(dirtyCreate2)) fail("expected clarification on second dirty create_story");
+  const cancelled = await adapter.callTool("respond_to_clarification", {
+    clarification_id: dirtyCreate2.clarification.clarification_id,
+    answer: "cancel",
+  }) as { kind: string; cancelled?: boolean };
+  if (cancelled.kind !== "ok" || cancelled.cancelled !== true) fail("cancel branch did not return cancelled=true");
+  const stillChapbook = await adapter.callTool("current_story_info", {}) as { name: string; format: string };
+  if (stillChapbook.format !== "Chapbook") fail(`cancel should not have switched format; got ${stillChapbook.format}`);
+  ok(`cancel left active story untouched (still ${stillChapbook.name} / ${stillChapbook.format})`);
+
   section("24. current_story_info before any story shows active=false");
   const info3 = await adapter.callTool("current_story_info", {}) as { active: boolean };
   ok(`current_story_info still reads cleanly post-discard (active=${info3.active})`);

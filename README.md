@@ -99,6 +99,15 @@ The MCP client connects to a long-lived URL. **Dev-iteration loop**: edit code,
 `npm run build`, restart only the server (Ctrl+C → re-run), call a tool from the
 same client window. No client reload, no per-session node process spawn.
 
+**After a server restart**: the server returns `404` on any request carrying a
+session id from the previous process (per the Streamable-HTTP spec — that's the
+canonical "session is gone, reinitialize" signal). MCP clients that auto-reinit
+on 404 recover transparently. Today's `mcp-remote` does *not* auto-reinit, so
+the practical workaround for Claude Desktop / claude.ai web Cowork users is:
+restart the bridge (quit + relaunch Claude Desktop, or refresh the Cowork
+session). The server itself is fine — only the client-side session needs to
+roll over.
+
 | Flag | Default | Notes |
 |---|---|---|
 | `--transport <stdio\|http>` | `stdio` | Selects the MCP transport. |

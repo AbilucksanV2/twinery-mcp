@@ -1,18 +1,13 @@
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan:
-`specs/006-http-transport-mode/plan.md`.
+`specs/001-mcp-server-mvp/plan.md`.
 
 Related artefacts for this feature:
 - Constitution: `.specify/memory/constitution.md`
-- Spec: `specs/006-http-transport-mode/spec.md`
-- Research (Phase 0): `specs/006-http-transport-mode/research.md`
-- Data model: `specs/006-http-transport-mode/data-model.md`
-- Contracts: `specs/006-http-transport-mode/contracts/`
-- Quickstart: `specs/006-http-transport-mode/quickstart.md`
-
-Project-level reference:
-- v1.0 master spec: `specs/001-mcp-server-mvp/`
-- Roadmap: `specs/001-mcp-server-mvp/roadmap.md`
-- Backlog tracking: `tracking/backlog.csv`
+- Spec: `specs/001-mcp-server-mvp/spec.md`
+- Research (Phase 0): `specs/001-mcp-server-mvp/research.md`
+- Data model: `specs/001-mcp-server-mvp/data-model.md`
+- Contracts: `specs/001-mcp-server-mvp/contracts/`
+- Quickstart: `specs/001-mcp-server-mvp/quickstart.md`
 <!-- SPECKIT END -->

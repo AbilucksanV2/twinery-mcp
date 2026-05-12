@@ -58,7 +58,7 @@ Labels must be unique within the story. On collision, the server surfaces a clar
 
 ### `create_story`
 
-Initialise the single active story. Asks for the story format if omitted (no silent defaults). Auto-generates a spec-valid IFID.
+Initialise the single active story. Asks for the story format if omitted (no silent defaults). Refuses if the active story has unsaved changes (pass discard_unsaved: true to override) — same dirty-guard contract as load_story so format-switching mid-session never silently clobbers work. Auto-generates a spec-valid IFID.
 
 **Input**
 
@@ -68,9 +68,11 @@ Initialise the single active story. Asks for the story format if omitted (no sil
 | `format` | enum(`Harlowe` \| `SugarCube` \| `Chapbook` \| `Snowman`) | no | — |
 | `format_version` | string | no | — |
 | `ifid` | string | no | — |
+| `discard_unsaved` | boolean | no | — |
 
 **Surfaces a clarification when:**
 
+- active story has unsaved changes AND discard_unsaved is not set: ask save_first | discard_unsaved | cancel.
 - format omitted: ask Harlowe | SugarCube | Chapbook | Snowman.
 
 **Example**
@@ -84,7 +86,7 @@ Initialise the single active story. Asks for the story format if omitted (no sil
 }
 ```
 
-If you omit `format`, the server will surface a clarification instead of picking a default.
+If you omit `format`, the server will surface a clarification instead of picking a default. If an unsaved active story is present, the server asks before clobbering it.
 
 ### `load_story`
 

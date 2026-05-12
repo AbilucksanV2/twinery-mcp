@@ -22,7 +22,7 @@ multi-format story testing, automated tests, CI, MCP elicitation) see
 
 | Tool | Purpose |
 |------|---------|
-| `create_story` | Start a new story (name + format). Asks for the format if you omit it — no silent defaults. Auto-generates a spec-valid IFID. |
+| `create_story` | Start a new story (name + format). Asks for the format if you omit it — no silent defaults. Refuses to clobber unsaved changes (clarification offers save / discard / cancel — same dirty-guard contract as `load_story`). Auto-generates a spec-valid IFID. |
 | `load_story` | Load a `.twee` file from disk into the active story. Refuses to clobber unsaved changes (clarification offers save / discard / cancel). Validates on load and reports issues without blocking. |
 | `current_story_info` | Read-only state probe — name, format, IFID, passage count, start, last-saved path, last-saved-at, dirty flag. Returns `{ active: false }` when no story is loaded. |
 | `create_passage` | Add a passage. First one becomes the start unless told otherwise. Auto-positions on the Twine canvas. |

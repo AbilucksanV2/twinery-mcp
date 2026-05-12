@@ -1,7 +1,24 @@
 import { z } from "zod";
 import { insertLink } from "../../graph/link.js";
-import { requireActiveStory } from "../state.js";
+import { requireActiveStory, setDirty } from "../state.js";
 import { ClarificationResponse, needClarification } from "../clarification.js";
+
+export const description =
+  "Insert a [[...]] link from one passage to another using syntax appropriate to the story's declared format (arrow for Harlowe/Chapbook, pipe for SugarCube/Snowman). Refuses to silently create missing passages.";
+
+export const clarificationTriggers: string[] = [
+  "from_passage does not exist: ask which passage was meant.",
+  "to_passage does not exist: ask create_empty | cancel (no silent creation).",
+];
+
+export const example = {
+  title: "Add a decision-point choice",
+  input: {
+    from_passage: "Start",
+    to_passage: "Pick Lock",
+    display_text: "Try to pick it",
+  },
+};
 
 export const inputSchema = {
   from_passage: z.string().min(1),
@@ -62,6 +79,8 @@ export async function handler(args: LinkArgs): Promise<object | ClarificationRes
     args.display_text ?? null,
     args.insertion_index ?? null,
   );
+
+  setDirty();
 
   return {
     kind: "ok",

@@ -1,0 +1,37 @@
+:: StoryTitle
+The Locked Cellar (Harlowe)
+
+:: StoryData
+{
+  "ifid": "B6CDE4E5-304E-487E-93A6-8F8DE57BD251",
+  "format": "Harlowe",
+  "format-version": "3.3.8",
+  "start": "Start",
+  "tag-colors": {"ending": "red"},
+  "zoom": 1
+}
+
+:: UserStylesheet [stylesheet]
+.passage { background: #efe; padding: 1em; }
+
+:: UserScript [script]
+window.fixtureToken = "harlowe-fixture-v1";
+
+:: Start
+(set: $hasKey to false)
+You stand before a heavy oak door.
+[[Search the floor->Search]]
+[[Try the handle->Try Handle]]
+
+:: Search
+(set: $hasKey to true)
+A small iron key glints among the leaves.
+[[Take it and try the door->Try Handle]]
+
+:: Try Handle
+(if: $hasKey)[The key turns smoothly. The door swings open.
+[[Step inside->Cellar]]](else:)[The handle won't budge.
+[[Search the floor->Search]]]
+
+:: Cellar [ending]
+A cool cellar greets you. **The end.**

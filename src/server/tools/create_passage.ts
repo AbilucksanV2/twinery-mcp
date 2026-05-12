@@ -1,7 +1,23 @@
 import { z } from "zod";
 import { newPassage } from "../../twine/adapter.js";
-import { requireActiveStory } from "../state.js";
+import { requireActiveStory, setDirty } from "../state.js";
 import { ClarificationResponse, needClarification } from "../clarification.js";
+
+export const description =
+  "Add a passage to the active story. Auto-positions when `position` is omitted. The first passage becomes the start unless told otherwise.";
+
+export const clarificationTriggers: string[] = [
+  "duplicate name: ask suffix | replace | cancel (no silent rename).",
+];
+
+export const example = {
+  title: "Create the start passage",
+  input: {
+    name: "Start",
+    text: "You stand before a locked door.",
+    set_as_start: true,
+  },
+};
 
 export const inputSchema = {
   name: z.string().min(1, "passage name is required"),
@@ -58,6 +74,8 @@ export async function handler(args: CreatePassageArgs): Promise<object | Clarifi
 
   const shouldBeStart = args.set_as_start === true || story.start === "";
   if (shouldBeStart) story.start = args.name;
+
+  setDirty();
 
   return {
     kind: "ok",

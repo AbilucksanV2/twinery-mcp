@@ -1,0 +1,13 @@
+# Normalize line endings on every checkout so windows-latest CI doesn't see
+# CRLF where macOS/Linux see LF. Without this, autocrlf=true on Windows hosts
+# converts text files to CRLF on checkout, which breaks byte-equivalence
+# checks like docs/GUIDE.md drift (scripts/check-guide-drift.mjs).
+* text=auto eol=lf
+
+# Binary files we never want touched.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary

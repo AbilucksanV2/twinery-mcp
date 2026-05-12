@@ -253,18 +253,21 @@ so you get a playable HTML directly.
 ## Verify locally without any client
 
 ```bash
-npm run smoke           # both transports + CLI fail-fast paths
+npm run smoke           # both transports + CLI fail-fast paths + format fixtures
 npm run smoke:stdio     # in-process, fastest
 npm run smoke:http      # spawns the server, drives via HTTP wire
 npm run smoke:cli       # CLI / host / port fail-fast checks only
+npm run fixtures        # all-format round-trip fixtures (Harlowe / SugarCube / Chapbook / Snowman)
 ```
 
 `npm run smoke` runs the full 24-section scripted session through both stdio and
-HTTP, then exercises every CLI failure path documented above. The session covers
+HTTP, exercises every CLI failure path documented above, then runs the
+all-format fixture round-trips (Twee↔Twee, Twee↔HTML↔Twee, Twee↔JSON↔Twee)
+across Harlowe, SugarCube, Chapbook, and Snowman. The session covers
 clarification paths on unknown names, incoming-link handling, image-placeholder
-label collisions, the guide generator, dirty-flag tracking across mutations, and
-a save → mutate → load round-trip with the dirty-clobber clarification. The
-combined run completes in well under 60s on a typical dev laptop.
+label collisions, the guide generator, dirty-flag tracking across mutations,
+and a save → mutate → load round-trip with the dirty-clobber clarification.
+The combined run completes in well under 60s on a typical dev laptop.
 
 GitHub Actions runs the same checks on every push to `main` / `dev` and on every
 pull request, across `ubuntu-latest`, `macos-latest`, and `windows-latest` on

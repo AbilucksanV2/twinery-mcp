@@ -42,14 +42,20 @@ function isAllowed(licenseField) {
 
 let parseable;
 try {
+  // shell: true so Windows resolves `npm` to `npm.cmd` via its shell;
+  // POSIX shells resolve `npm` the same as before. Args are hardcoded
+  // string literals, so no injection risk.
   parseable = execFileSync("npm", ["ls", "--omit=dev", "--all", "--parseable"], {
     cwd: REPO_ROOT,
     encoding: "utf8",
     maxBuffer: 32 * 1024 * 1024,
+    shell: true,
   });
 } catch (err) {
-  // npm ls exits non-zero on extraneous deps but still produces output on stdout.
-  if (err.stdout !== undefined && err.stdout.length > 0) parseable = err.stdout;
+  // `npm ls` exits non-zero on extraneous deps but still produces output on
+  // stdout. Defensive null check — Windows / failed-spawn paths can set
+  // err.stdout to null instead of undefined.
+  if (typeof err.stdout === "string" && err.stdout.length > 0) parseable = err.stdout;
   else throw err;
 }
 

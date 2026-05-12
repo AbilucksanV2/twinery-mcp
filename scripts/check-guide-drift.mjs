@@ -31,14 +31,23 @@ try {
   process.exit(1);
 }
 
-if (live === onDisk) {
-  console.log(`[check-guide-drift] OK — docs/GUIDE.md is byte-equivalent to the registry-generated guide (${live.length} bytes).`);
+// Normalize CRLF → LF before comparing. The repo's .gitattributes asks git
+// to check out with LF on every platform, but defending against autocrlf=true
+// or a CRLF-stamped checkout keeps the check honest no matter how the file
+// landed on disk.
+const liveLF = live.replace(/\r\n/g, "\n");
+const onDiskLF = onDisk.replace(/\r\n/g, "\n");
+
+if (liveLF === onDiskLF) {
+  console.log(`[check-guide-drift] OK — docs/GUIDE.md is byte-equivalent to the registry-generated guide (${liveLF.length} bytes, line endings normalized).`);
   process.exit(0);
 }
 
 // Show a small unified-diff style summary so the failure log is actionable.
-const liveLines = live.split("\n");
-const diskLines = onDisk.split("\n");
+// Diff against the LF-normalized strings so CRLF artefacts don't drown out
+// the real content difference.
+const liveLines = liveLF.split("\n");
+const diskLines = onDiskLF.split("\n");
 const maxLines = Math.max(liveLines.length, diskLines.length);
 const diff = [];
 for (let i = 0; i < maxLines; i++) {

@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 
@@ -130,7 +131,11 @@ async function main(): Promise<void> {
   process.on("SIGTERM", () => void shutdown());
 }
 
-const isMain = import.meta.url === `file://${process.argv[1]}`;
+// Use pathToFileURL so the comparison works on Windows, where process.argv[1]
+// uses backslashes and a drive letter (e.g. D:\a\...\index.js) but import.meta.url
+// is the canonical file:///D:/a/.../index.js form.
+const isMain = process.argv[1] !== undefined
+  && import.meta.url === pathToFileURL(process.argv[1]).href;
 if (isMain) {
   main().catch((err) => {
     console.error("[twinery-mcp-poc] fatal:", err);

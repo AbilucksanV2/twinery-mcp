@@ -5,6 +5,15 @@
 **Status**: Draft
 **Input**: F-VARIABLES under epic E07 Stateful authoring. Surfaced 2026-05-14 during the cartographers-apprentice authoring session — the LLM authored a 17-passage Harlowe story with zero macros (purely static `[[...]]` branching) because no tool existed to introduce state.
 
+## Clarifications
+
+### Session 2026-05-15
+
+- Q: `list_variables` discovery on loaded stories with raw setter syntax already in passage text → A: `load_story` scans every loaded passage once, extracts setters per the active format's grammar, and populates the in-memory registry. `list_variables` always reads from the registry. The registry is the single source of truth post-load; parsing happens once at load time, not on every list call.
+- Q: Variable name case sensitivity → A: Case-sensitive across the registry and the emitter. `playerName` and `playername` are two distinct variables. Matches Harlowe / SugarCube / Snowman runtime semantics, so the registry stays in lockstep with what the format actually does at play time. No special handling for case-variants; an LLM typo that creates a near-duplicate is caught the moment `read_variable` returns "not declared".
+- Q: `insert_variable_reader` placement when the passage ends with one or more `[[...]]` link blocks → A: Detect trailing-link blocks per the active format's link grammar and insert the reader immediately before the first one. The reader lands at the tail of the prose region, before the choice list — preserves the "links cap the passage" convention every existing fixture and tester-authored story follows. An explicit numeric offset overrides this auto-placement.
+- Q: Value-type emission per format for numbers and booleans (especially Chapbook's documented `yes`/`no` sugar) → A: Accept `string | number | boolean` uniformly. Numbers emit unquoted as their JavaScript string form (`42`, `3.14`). Booleans emit as `true` / `false` literals in every format including Chapbook (Chapbook accepts JS-style booleans everywhere even though docs reference `yes`/`no` as sugar). Floats supported. Strings quoted per FR-009. One canonical form per format keeps the emitter simple and the round-trip stable.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 — Declare and read a variable in one passage (Priority: P1) 🎯 MVP
@@ -197,15 +206,30 @@ for `playerName`.
 - **FR-004**: System MUST expose a `list_variables` MCP tool that
   returns every declared variable with: name, initial value, list of
   passages containing setters, list of passages containing readers.
+  `list_variables` reads exclusively from the in-memory registry; it
+  does not re-parse passage text on each call.
+- **FR-004a**: `load_story` MUST scan every loaded passage's text once
+  during load, extract every setter expression per the active format's
+  grammar (Harlowe `(set: $X to V)`, SugarCube `<<set $X to V>>`,
+  Chapbook vars-section `X: V`, Snowman `<% s.X = V %>`), and populate
+  the registry with the extracted variables before returning. This
+  keeps the registry authoritative after load so `list_variables` and
+  the rest of the variable tool surface see variables that were
+  authored outside this server.
 - **FR-005**: System MUST expose a `delete_variable` MCP tool that
   removes every setter block and every reader expression for the
   named variable from the story atomically. Honors the dirty guard
   per FR-013 below.
 - **FR-006**: System MUST expose an `insert_variable_reader` MCP tool
   that inserts a format-correct reader expression for a named variable
-  into a named passage's text at the position the LLM specifies
-  (default: append). The tool MUST refuse to insert a reader for a
-  name that hasn't been declared, surfacing a clarification
+  into a named passage's text. Default placement: insert immediately
+  before the first trailing `[[...]]` link block in the passage, so
+  the reader ends up at the tail of the prose region and the choice
+  list stays at the end of the passage as authors expect. If the
+  passage has no trailing link block, the reader is appended. An
+  optional explicit numeric `offset` argument overrides the
+  auto-placement. The tool MUST refuse to insert a reader for a name
+  that hasn't been declared, surfacing a clarification
   (`declare_now | cancel`).
 - **FR-007**: System MUST emit format-correct setter syntax per the
   active story's declared format:
@@ -220,15 +244,26 @@ for `playerName`.
   - SugarCube: `<<= $name>>`.
   - Chapbook: `{name}`.
   - Snowman: `<%= s.name %>`.
-- **FR-009**: System MUST quote string values appropriately for the
-  declared format (Harlowe: double quotes; SugarCube: double quotes;
-  Chapbook: single quotes per the format's vars-section convention;
-  Snowman: single quotes since the JS context is `s.name = ...`). The
-  tool boundary handles all escaping so the LLM passes raw strings.
+- **FR-009**: System MUST quote and emit values per declared type and
+  format:
+  - **Strings** — quoted per format: Harlowe and SugarCube use double
+    quotes; Chapbook uses single quotes per the format's vars-section
+    convention; Snowman uses single quotes (the JS context is
+    `s.name = ...`). The tool boundary handles all escaping so the
+    LLM passes raw strings.
+  - **Numbers** (int or float) — emitted unquoted as their JavaScript
+    string form (`42`, `3.14`, `-1`). Identical across all four formats.
+  - **Booleans** — emitted as `true` / `false` literals in every format
+    including Chapbook. Chapbook accepts the JS-style literal even
+    though its documentation cites `yes` / `no` as sugar — one
+    canonical form per format keeps the round-trip stable.
 - **FR-010**: System MUST validate variable names at the tool
   boundary against `^[A-Za-z_][A-Za-z0-9_]*$` and reject names with
   format-reserved prefixes / shapes. Rejection is a clear error
-  (not a clarification — the LLM can rename and retry).
+  (not a clarification — the LLM can rename and retry). Names are
+  case-sensitive across the registry and the emitter: `playerName`
+  and `playername` are two distinct variables — matches the
+  case-sensitivity of Harlowe / SugarCube / Snowman at play time.
 - **FR-011**: System MUST reject duplicate `declare_variable` calls
   for the same name with a clarification offering
   `replace_initial | leave_as_is | cancel` — matches the existing
@@ -298,13 +333,18 @@ for `playerName`.
   in-process for the life of the server, persisted only via
   `save_story` / restored via `load_story`. Multi-story workspace is
   still `F-T3-MULTI`, out of scope.
-- Type system stays simple: string | number | boolean. No arrays, no
-  objects, no expressions. Composite state is the inventory feature
-  (`F-INVENTORY`) and will be built on top of these primitives.
-- Reader insertion happens at a tool-boundary position — append by
-  default, optionally at an explicit offset. We do not try to be
-  clever about prose-aware placement (e.g. "insert after the second
-  sentence"); the LLM picks the position.
+- Type system stays simple: `string | number | boolean`. Numbers
+  cover both integers and floats. Booleans always emit as `true` /
+  `false` per FR-009. No arrays, no objects, no expressions.
+  Composite state is the inventory feature (`F-INVENTORY`) and will
+  be built on top of these primitives.
+- Reader insertion is link-aware by default: the tool detects the
+  first trailing `[[...]]` link block and inserts the reader
+  immediately before it (so the choice list stays at the tail of the
+  passage). If the passage has no trailing links, the reader is
+  appended. The LLM can pass an explicit offset to override. We do
+  not try to be clever about prose-aware placement beyond the
+  trailing-link rule (e.g. no "insert after the second sentence").
 - The Twine 2 editor and the four format runtimes (Harlowe 3.x,
   SugarCube 2.x, Chapbook 2.x, Snowman 2.x) are the reference
   consumers; we emit syntax that those runtimes accept verbatim. If

@@ -1,0 +1,249 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "tools.json",
+  "title": "F-VARIABLES — six MCP tool contracts",
+  "description": "Input / output / clarification contracts for the six new MCP tools introduced by feature 011 (Variable management tools). Each tool entry documents the tool's name, its argument schema, its success-response schema, the clarifications it may surface, and the error shapes the LLM should expect.",
+  "version": "0.6.0-rc",
+  "tools": {
+    "declare_variable": {
+      "description": "Declare a story-level variable and emit a format-correct setter into the active story's Start passage.",
+      "input": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "pattern": "^[A-Za-z_][A-Za-z0-9_]*$",
+            "description": "Variable name. Case-sensitive. Must not collide with the active format's reserved-name set."
+          },
+          "initial": {
+            "oneOf": [{ "type": "string" }, { "type": "number" }, { "type": "boolean" }, { "type": "null" }],
+            "description": "Initial value. Defaults to null (no setter emitted; declared-only). When provided, a setter is appended to the Start passage."
+          }
+        }
+      },
+      "ok_response": {
+        "type": "object",
+        "required": ["kind", "variable"],
+        "properties": {
+          "kind": { "const": "ok" },
+          "variable": {
+            "type": "object",
+            "required": ["name", "type", "initial_value", "declared_in"],
+            "properties": {
+              "name": { "type": "string" },
+              "type": { "enum": ["string", "number", "boolean", "null"] },
+              "initial_value": {
+                "oneOf": [{ "type": "string" }, { "type": "number" }, { "type": "boolean" }, { "type": "null" }]
+              },
+              "declared_in": { "type": ["string", "null"], "description": "Passage name where the initial setter landed (Start typically). null when initial was omitted." }
+            }
+          }
+        }
+      },
+      "clarifications": [
+        "No Start passage exists yet → ask the LLM to set_start_passage first.",
+        "Variable name already declared → save_first | discard_unsaved | cancel-equivalent: replace_initial | leave_as_is | cancel."
+      ]
+    },
+
+    "set_variable": {
+      "description": "Add or replace a setter expression for a named variable in a named passage. Idempotent within a passage.",
+      "input": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["passage_name", "name", "value"],
+        "properties": {
+          "passage_name": { "type": "string" },
+          "name": { "type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_]*$" },
+          "value": {
+            "oneOf": [{ "type": "string" }, { "type": "number" }, { "type": "boolean" }]
+          }
+        }
+      },
+      "ok_response": {
+        "type": "object",
+        "required": ["kind", "passage_name", "name", "value", "action"],
+        "properties": {
+          "kind": { "const": "ok" },
+          "passage_name": { "type": "string" },
+          "name": { "type": "string" },
+          "value": { "oneOf": [{ "type": "string" }, { "type": "number" }, { "type": "boolean" }] },
+          "action": { "enum": ["created", "replaced"], "description": "created when this is a new setter for the name in the passage; replaced when an existing setter was idempotently overwritten." },
+          "emitted_block": { "type": "string", "description": "The exact setter substring emitted into the passage." }
+        }
+      },
+      "clarifications": [
+        "Variable not declared → declare_now | cancel.",
+        "Passage doesn't exist → clarification listing existing passages, parity with link_passages."
+      ]
+    },
+
+    "read_variable": {
+      "description": "Read-only probe — returns the current declared / set value of a named variable. No side effects.",
+      "input": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name"],
+        "properties": {
+          "name": { "type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_]*$" }
+        }
+      },
+      "ok_response": {
+        "type": "object",
+        "required": ["kind", "name", "type", "initial_value", "setter_count", "reader_count"],
+        "properties": {
+          "kind": { "const": "ok" },
+          "name": { "type": "string" },
+          "type": { "enum": ["string", "number", "boolean", "null"] },
+          "initial_value": { "oneOf": [{ "type": "string" }, { "type": "number" }, { "type": "boolean" }, { "type": "null" }] },
+          "setter_count": { "type": "integer", "minimum": 0 },
+          "reader_count": { "type": "integer", "minimum": 0 },
+          "loaded_without_setter": { "type": "boolean", "description": "true only when load_story extracted readers but no setter for this name. See research.md R6." }
+        }
+      },
+      "error_response": {
+        "type": "object",
+        "required": ["kind", "message"],
+        "properties": {
+          "kind": { "const": "error" },
+          "message": { "type": "string", "description": "Returned when the name is not in the registry. NOT a clarification — the LLM can recover with declare_variable." }
+        }
+      }
+    },
+
+    "list_variables": {
+      "description": "Return every declared variable in the active story with usage statistics.",
+      "input": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "ok_response": {
+        "type": "object",
+        "required": ["kind", "variables"],
+        "properties": {
+          "kind": { "const": "ok" },
+          "variables": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["name", "type", "initial_value", "setter_passages", "reader_passages"],
+              "properties": {
+                "name": { "type": "string" },
+                "type": { "enum": ["string", "number", "boolean", "null"] },
+                "initial_value": { "oneOf": [{ "type": "string" }, { "type": "number" }, { "type": "boolean" }, { "type": "null" }] },
+                "setter_passages": { "type": "array", "items": { "type": "string" }, "description": "Names of passages containing a setter for this variable, in insertion order." },
+                "reader_passages": { "type": "array", "items": { "type": "string" }, "description": "Names of passages containing a reader for this variable, in insertion order." },
+                "loaded_without_setter": { "type": "boolean" }
+              }
+            }
+          }
+        }
+      }
+    },
+
+    "delete_variable": {
+      "description": "Atomically remove every setter and every reader for a named variable from the active story. Honors the dirty-flag guard from feature 010.",
+      "input": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name"],
+        "properties": {
+          "name": { "type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_]*$" },
+          "discard_unsaved": { "type": "boolean", "default": false }
+        }
+      },
+      "ok_response": {
+        "type": "object",
+        "required": ["kind", "name", "setters_removed", "readers_removed", "affected_passages"],
+        "properties": {
+          "kind": { "const": "ok" },
+          "name": { "type": "string" },
+          "setters_removed": { "type": "integer", "minimum": 0 },
+          "readers_removed": { "type": "integer", "minimum": 0 },
+          "affected_passages": { "type": "array", "items": { "type": "string" } }
+        }
+      },
+      "clarifications": [
+        "Active story is dirty and discard_unsaved is not set → save_first | discard_unsaved | cancel (matches load_story / create_story).",
+        "Variable not declared → returns error (kind: error, message names the missing variable). Not a clarification."
+      ]
+    },
+
+    "insert_variable_reader": {
+      "description": "Insert a format-correct reader expression for a named variable into a named passage. Defaults to link-aware placement — immediately before the first trailing [[...]] link block in the passage.",
+      "input": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["passage_name", "name"],
+        "properties": {
+          "passage_name": { "type": "string" },
+          "name": { "type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_]*$" },
+          "offset": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Optional explicit character offset within the passage text. When provided, overrides the default link-aware placement."
+          }
+        }
+      },
+      "ok_response": {
+        "type": "object",
+        "required": ["kind", "passage_name", "name", "reader_block", "offset", "placement"],
+        "properties": {
+          "kind": { "const": "ok" },
+          "passage_name": { "type": "string" },
+          "name": { "type": "string" },
+          "reader_block": { "type": "string", "description": "The exact reader substring inserted into the passage." },
+          "offset": { "type": "integer", "description": "Final character offset where the reader was inserted." },
+          "placement": { "enum": ["before_trailing_links", "appended", "explicit_offset"], "description": "Which placement strategy ran." }
+        }
+      },
+      "clarifications": [
+        "Variable not declared → declare_now | cancel.",
+        "Passage doesn't exist → clarification listing existing passages."
+      ]
+    }
+  },
+
+  "format_syntax_matrix": {
+    "harlowe": {
+      "setter_string":  "(set: $<name> to \"<value>\")",
+      "setter_number":  "(set: $<name> to <value>)",
+      "setter_boolean": "(set: $<name> to <value>)",
+      "reader":         "$<name>"
+    },
+    "sugarcube": {
+      "setter_string":  "<<set $<name> to \"<value>\">>",
+      "setter_number":  "<<set $<name> to <value>>>",
+      "setter_boolean": "<<set $<name> to <value>>>",
+      "reader":         "<<= $<name>>>"
+    },
+    "chapbook": {
+      "setter_string":  "<name>: '<value>'   (in vars section, above the `--` separator)",
+      "setter_number":  "<name>: <value>     (in vars section)",
+      "setter_boolean": "<name>: <value>     (true | false; not yes | no — see spec clarification Q4)",
+      "reader":         "{<name>}"
+    },
+    "snowman": {
+      "setter_string":  "<% s.<name> = '<value>' %>",
+      "setter_number":  "<% s.<name> = <value> %>",
+      "setter_boolean": "<% s.<name> = <value> %>",
+      "reader":         "<%= s.<name> %>"
+    }
+  },
+
+  "reserved_names": {
+    "harlowe":   ["time"],
+    "sugarcube": ["setup", "settings", "prehistory"],
+    "chapbook":  [],
+    "snowman":   ["s", "window", "document"]
+  },
+
+  "non_deterministic_fields": [
+    "clarification_id (UUID per surfaced clarification)",
+    "Variable.setters[].offset (depends on passage text history; not stable across edits)",
+    "Variable.readers[].offset (same)"
+  ]
+}

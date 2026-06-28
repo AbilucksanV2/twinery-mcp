@@ -154,9 +154,9 @@ async function createAdapter(): Promise<SmokeAdapter> {
 async function runSmoke(adapter: SmokeAdapter): Promise<void> {
   console.log(`Twinery MCP POC smoke test (transport=${adapter.mode})\n==========================`);
 
-  // Pre-flight for HTTP: verify the listTools wire format returns all 15 tools.
+  // Pre-flight for HTTP: verify the listTools wire format returns all 21 tools.
   if (adapter.mode === "http" && adapter.listToolNames !== undefined) {
-    section("0. tools/list over HTTP returns all 15 tools");
+    section("0. tools/list over HTTP returns all 21 tools");
     const names = await adapter.listToolNames();
     const expected = TOOL_REGISTRY.map((t) => t.name).sort();
     const got = [...names].sort();
@@ -489,6 +489,144 @@ async function runSmoke(adapter: SmokeAdapter): Promise<void> {
   const stillChapbook = await adapter.callTool("current_story_info", {}) as { name: string; format: string };
   if (stillChapbook.format !== "Chapbook") fail(`cancel should not have switched format; got ${stillChapbook.format}`);
   ok(`cancel left active story untouched (still ${stillChapbook.name} / ${stillChapbook.format})`);
+
+  // -------------------------------------------------------------------------
+  // Feature 011 — variable management tools (US1–US4)
+  // -------------------------------------------------------------------------
+
+  section("23c. variables US1 — declare + read + insert_variable_reader round-trip (Harlowe)");
+  const tmpV = await mkdtemp(join(tmpdir(), "twinery-smoke-vars-"));
+  await adapter.callTool("create_story", { name: "Vars MVP", format: "Harlowe", discard_unsaved: true });
+  await adapter.callTool("create_passage", { name: "Start", text: "You wake in a cell.", set_as_start: true, tags: [] });
+  await adapter.callTool("create_passage", { name: "Greeting", text: "A guard nods at you.\n[[Continue->Start]]", tags: [] });
+
+  const decl = await adapter.callTool("declare_variable", { name: "playerName", initial: "the stranger" }) as {
+    kind: string;
+    variable: { name: string; type: string; initial_value: unknown; declared_in: string | null };
+  };
+  if (decl.kind !== "ok" || decl.variable.declared_in !== "Start") fail(`declare_variable failed: ${JSON.stringify(decl)}`);
+
+  const rd = await adapter.callTool("read_variable", { name: "playerName" }) as {
+    kind: string; type: string; initial_value: unknown; setter_count: number; reader_count: number;
+  };
+  if (rd.kind !== "ok" || rd.type !== "string" || rd.initial_value !== "the stranger" || rd.setter_count !== 1) {
+    fail(`read_variable mismatch: ${JSON.stringify(rd)}`);
+  }
+
+  const rdMiss = await adapter.callTool("read_variable", { name: "nope" }) as { kind: string };
+  if (rdMiss.kind !== "error") fail("read_variable on unknown name should return kind:error, not a clarification");
+
+  const insR = await adapter.callTool("insert_variable_reader", { passage_name: "Greeting", name: "playerName" }) as {
+    kind: string; placement: string; reader_block: string;
+  };
+  if (insR.kind !== "ok" || insR.placement !== "before_trailing_links") fail(`insert_variable_reader placement wrong: ${JSON.stringify(insR)}`);
+
+  const dInfoV = await adapter.callTool("current_story_info", {}) as { dirty: boolean };
+  if (dInfoV.dirty !== true) fail("expected dirty=true after variable mutations");
+
+  const savedV = await adapter.callTool("save_story", { output_dir: tmpV }) as { written_files: string[] };
+  const tweeText = await readFile(savedV.written_files[0]!, "utf8");
+  if (!tweeText.includes('(set: $playerName to "the stranger")')) fail("setter missing from saved Start");
+  const greetingChunk = tweeText.split(":: Greeting")[1] ?? "";
+  if (!greetingChunk.includes("$playerName")) fail("reader $playerName missing from saved Greeting");
+  ok(`declared playerName, read it back, reader placed before trailing links, round-tripped through .twee`);
+
+  section("23d. variables US2 — set_variable idempotency (Harlowe)");
+  const set1 = await adapter.callTool("set_variable", { passage_name: "Greeting", name: "playerName", value: "Mira" }) as { kind: string; action: string };
+  if (set1.kind !== "ok" || set1.action !== "created") fail(`first set_variable should be created: ${JSON.stringify(set1)}`);
+  const set2 = await adapter.callTool("set_variable", { passage_name: "Greeting", name: "playerName", value: "Anya" }) as { kind: string; action: string };
+  if (set2.kind !== "ok" || set2.action !== "replaced") fail(`second set_variable should be replaced: ${JSON.stringify(set2)}`);
+  const gp = await adapter.callTool("get_passage", { name: "Greeting" }) as { passage: { text: string } };
+  const setterCount = gp.passage.text.split("(set: $playerName to").length - 1;
+  if (setterCount !== 1) fail(`expected exactly 1 setter for playerName in Greeting, got ${setterCount}`);
+  if (!gp.passage.text.includes('(set: $playerName to "Anya")')) fail("expected the second value Anya to win");
+  ok(`set_variable created then replaced; Greeting holds exactly one setter with the latest value`);
+  await rm(tmpV, { recursive: true, force: true });
+
+  section("23e. variables US3 — list_variables + extract-on-load round-trip (Harlowe)");
+  const tmpV2 = await mkdtemp(join(tmpdir(), "twinery-smoke-vars-list-"));
+  await adapter.callTool("create_story", { name: "Vars Inspect", format: "Harlowe", discard_unsaved: true });
+  await adapter.callTool("create_passage", { name: "Start", text: "Begin.", set_as_start: true, tags: [] });
+  await adapter.callTool("create_passage", { name: "Room", text: "A bare room.\n[[Back->Start]]", tags: [] });
+  await adapter.callTool("declare_variable", { name: "score", initial: 0 });
+  await adapter.callTool("declare_variable", { name: "hasKey", initial: false });
+  await adapter.callTool("set_variable", { passage_name: "Room", name: "score", value: 10 });
+  await adapter.callTool("insert_variable_reader", { passage_name: "Room", name: "hasKey" });
+
+  type VarRow = { name: string; type: string; setter_passages: string[]; reader_passages: string[]; loaded_without_setter: boolean };
+  const listBefore = await adapter.callTool("list_variables", {}) as { kind: string; variables: VarRow[] };
+  if (listBefore.kind !== "ok" || listBefore.variables.length !== 2) fail(`expected 2 variables, got ${JSON.stringify(listBefore)}`);
+  const scoreB = listBefore.variables.find((v) => v.name === "score");
+  if (scoreB === undefined || !scoreB.setter_passages.includes("Start") || !scoreB.setter_passages.includes("Room")) fail("score setter_passages wrong before save");
+
+  const savedV2 = await adapter.callTool("save_story", { output_dir: tmpV2 }) as { written_files: string[] };
+  const reloaded = await adapter.callTool("load_story", { path: savedV2.written_files[0]!, discard_unsaved: true }) as { kind: string };
+  if (reloaded.kind !== "ok") fail(`load_story failed: ${JSON.stringify(reloaded)}`);
+
+  const listAfter = await adapter.callTool("list_variables", {}) as { variables: VarRow[] };
+  if (listAfter.variables.length !== 2) fail(`expected 2 variables after load, got ${listAfter.variables.length}`);
+  const scoreA = listAfter.variables.find((v) => v.name === "score");
+  if (scoreA === undefined || scoreA.type !== "number" || !scoreA.setter_passages.includes("Start") || !scoreA.setter_passages.includes("Room")) fail("score wrong after extract-on-load");
+  const keyA = listAfter.variables.find((v) => v.name === "hasKey");
+  if (keyA === undefined || keyA.type !== "boolean" || !keyA.reader_passages.includes("Room")) fail("hasKey wrong after extract-on-load");
+  ok(`list_variables returned 2 vars; extract-on-load rebuilt both with correct setter/reader passages`);
+
+  // loaded_without_setter path — a reader with no setter anywhere.
+  const ghostTwee =
+    ':: StoryTitle\nGhost\n\n:: StoryData\n{\n"ifid": "D674C58C-DEFA-4F70-B7A2-27742230C0FC",\n"format": "Harlowe",\n"format-version": "3.3.8",\n"start": "Start"\n}\n\n:: Start\nYou sense $ghost nearby.\n';
+  const ghostPath = join(tmpV2, "ghost.twee");
+  await writeFile(ghostPath, ghostTwee, "utf8");
+  const ghostLoaded = await adapter.callTool("load_story", { path: ghostPath, discard_unsaved: true }) as { kind: string };
+  if (ghostLoaded.kind !== "ok") fail(`ghost load failed: ${JSON.stringify(ghostLoaded)}`);
+  const ghostRead = await adapter.callTool("read_variable", { name: "ghost" }) as { kind: string; loaded_without_setter: boolean; reader_count: number };
+  if (ghostRead.kind !== "ok" || ghostRead.loaded_without_setter !== true || ghostRead.reader_count !== 1) fail(`expected loaded_without_setter=true for ghost: ${JSON.stringify(ghostRead)}`);
+  ok(`reader-without-setter extracted with loaded_without_setter=true`);
+  await rm(tmpV2, { recursive: true, force: true });
+
+  section("23f. variables US4 — delete_variable strips all setters/readers + dirty guard (Harlowe)");
+  const tmpV3 = await mkdtemp(join(tmpdir(), "twinery-smoke-vars-del-"));
+  await adapter.callTool("create_story", { name: "Vars Delete", format: "Harlowe", discard_unsaved: true });
+  await adapter.callTool("create_passage", { name: "Start", text: "Start.", set_as_start: true, tags: [] });
+  await adapter.callTool("create_passage", { name: "A", text: "Room A.\n[[Start]]", tags: [] });
+  await adapter.callTool("create_passage", { name: "B", text: "Room B.\n[[Start]]", tags: [] });
+  await adapter.callTool("create_passage", { name: "C", text: "Room C.\n[[Start]]", tags: [] });
+  await adapter.callTool("declare_variable", { name: "gold", initial: 5 });
+  await adapter.callTool("set_variable", { passage_name: "A", name: "gold", value: 10 });
+  await adapter.callTool("set_variable", { passage_name: "B", name: "gold", value: 20 });
+  await adapter.callTool("insert_variable_reader", { passage_name: "C", name: "gold" });
+  await adapter.callTool("insert_variable_reader", { passage_name: "A", name: "gold" });
+
+  const savedV3 = await adapter.callTool("save_story", { output_dir: tmpV3 }) as { written_files: string[] };
+  void savedV3;
+  const cleanInfo = await adapter.callTool("current_story_info", {}) as { dirty: boolean };
+  if (cleanInfo.dirty !== false) fail("expected clean (dirty=false) right after save, before delete");
+
+  const del = await adapter.callTool("delete_variable", { name: "gold" }) as {
+    kind: string; setters_removed: number; readers_removed: number; affected_passages: string[];
+  };
+  if (del.kind !== "ok") fail(`delete_variable failed on clean story: ${JSON.stringify(del)}`);
+  if (del.setters_removed !== 3) fail(`expected 3 setters removed, got ${del.setters_removed}`);
+  if (del.readers_removed !== 2) fail(`expected 2 readers removed, got ${del.readers_removed}`);
+
+  const savedV3b = await adapter.callTool("save_story", { output_dir: tmpV3 }) as { written_files: string[] };
+  const tweeAfter = await readFile(savedV3b.written_files[0]!, "utf8");
+  if (tweeAfter.includes("$gold")) fail("a $gold setter/reader survived delete_variable");
+  ok(`delete_variable removed 3 setters + 2 readers across ${del.affected_passages.length} passages; zero $gold remain in .twee`);
+
+  // Dirty-guard: a mutation then delete_variable must surface the save/discard/cancel clarification.
+  await adapter.callTool("declare_variable", { name: "silver", initial: 1 });
+  const dirtyDel = await adapter.callTool("delete_variable", { name: "silver" });
+  if (!isClarification(dirtyDel)) fail("expected dirty-guard clarification from delete_variable");
+  for (const a of ["save_first", "discard_unsaved", "cancel"]) {
+    if (!(dirtyDel.clarification.valid_answers?.includes(a) ?? false)) fail(`expected ${a} as a valid answer`);
+  }
+  const dirtyDelResolved = await adapter.callTool("respond_to_clarification", {
+    clarification_id: dirtyDel.clarification.clarification_id,
+    answer: "discard_unsaved",
+  }) as { kind: string };
+  if (dirtyDelResolved.kind !== "ok") fail("discard_unsaved did not complete the delete");
+  ok(`delete_variable honored the dirty guard; discard_unsaved resolved the deletion`);
+  await rm(tmpV3, { recursive: true, force: true });
 
   section("24. current_story_info before any story shows active=false");
   const info3 = await adapter.callTool("current_story_info", {}) as { active: boolean };

@@ -62,15 +62,15 @@ Single-project TypeScript package, layout unchanged from v0.5. New files under `
 
 ### Implementation tasks for User Story 1
 
-- [ ] T008 [US1] Implement `src/server/tools/declare_variable.ts` exporting `description`, `clarificationTriggers`, `example`, `inputSchema` (zod), and `handler`. Handler validates the name (T002 helpers), rejects format-reserved names with a clear `kind: error` response (FR-010), surfaces a `replace_initial | leave_as_is | cancel` clarification on duplicate names (FR-011), and on success calls `emitSetter` (when `initial` is provided) and appends it to the Start passage's text. Updates the registry. Flips dirty.
+- [X] T008 [US1] Implement `src/server/tools/declare_variable.ts` exporting `description`, `clarificationTriggers`, `example`, `inputSchema` (zod), and `handler`. Handler validates the name (T002 helpers), rejects format-reserved names with a clear `kind: error` response (FR-010), surfaces a `replace_initial | leave_as_is | cancel` clarification on duplicate names (FR-011), and on success calls `emitSetter` (when `initial` is provided) and appends it to the Start passage's text. Updates the registry. Flips dirty.
 
-- [ ] T009 [US1] Implement `src/server/tools/insert_variable_reader.ts`. Validates the variable name; surfaces a `declare_now | cancel` clarification if the variable isn't in the registry (FR-006); surfaces the existing passage-not-found clarification when `passage_name` doesn't match. On success calls `findInsertOffsetBeforeTrailingLinks` (T005) when no explicit `offset` is passed; emits the reader and splices it into the passage text; records the `ReaderRecord` on the variable. Flips dirty.
+- [X] T009 [US1] Implement `src/server/tools/insert_variable_reader.ts`. Validates the variable name; surfaces a `declare_now | cancel` clarification if the variable isn't in the registry (FR-006); surfaces the existing passage-not-found clarification when `passage_name` doesn't match. On success calls `findInsertOffsetBeforeTrailingLinks` (T005) when no explicit `offset` is passed; emits the reader and splices it into the passage text; records the `ReaderRecord` on the variable. Flips dirty.
 
-- [ ] T010 [US1] Implement `src/server/tools/read_variable.ts` (read-only). Returns the variable's current registry view (name, type, initial_value, setter_count, reader_count, loaded_without_setter). Returns `{ kind: error, message }` on unknown name (NOT a clarification — FR-003 is explicit).
+- [X] T010 [US1] Implement `src/server/tools/read_variable.ts` (read-only). Returns the variable's current registry view (name, type, initial_value, setter_count, reader_count, loaded_without_setter). Returns `{ kind: error, message }` on unknown name (NOT a clarification — FR-003 is explicit).
 
-- [ ] T011 [US1] Register the three new tools in `src/guide/registry.ts` (`declare_variable`, `read_variable`, `insert_variable_reader`). Order them next to the existing read-tools for guide readability. Regenerate `docs/GUIDE.md` via `npm run guide:generate`.
+- [X] T011 [US1] Register the three new tools in `src/guide/registry.ts` (`declare_variable`, `read_variable`, `insert_variable_reader`). Order them next to the existing read-tools for guide readability. Regenerate `docs/GUIDE.md` via `npm run guide:generate`.
 
-- [ ] T012 [US1] Add smoke section 23c to `src/smoke.ts`: `create_story` Harlowe → `create_passage` Start + Greeting → `declare_variable playerName "the stranger"` → `insert_variable_reader Greeting playerName` → `save_story` → re-read `.twee` and assert it contains `(set: $playerName to "the stranger")` in Start and `$playerName` in Greeting. Confirm dirty flag transitions correctly through these calls.
+- [X] T012 [US1] Add smoke section 23c to `src/smoke.ts`: `create_story` Harlowe → `create_passage` Start + Greeting → `declare_variable playerName "the stranger"` → `insert_variable_reader Greeting playerName` → `save_story` → re-read `.twee` and assert it contains `(set: $playerName to "the stranger")` in Start and `$playerName` in Greeting. Confirm dirty flag transitions correctly through these calls.
 
 **Checkpoint**: After T008–T012, `npm run smoke` green (24 + 23c + cli + fixtures). MVP shippable as v0.6.0-rc1 if desired.
 
@@ -84,11 +84,11 @@ Single-project TypeScript package, layout unchanged from v0.5. New files under `
 
 ### Implementation tasks for User Story 2
 
-- [ ] T013 [US2] Implement `src/server/tools/set_variable.ts`. Validates name and value; surfaces a `declare_now | cancel` clarification if the variable isn't in the registry (FR-002 implies declaration first); surfaces the existing passage-not-found clarification when `passage_name` doesn't match. Idempotency: if the registry has a `SetterRecord` for this `(name, passageName)` pair, splice out the old block from the passage text and emit the replacement at the same offset (action: `replaced`); otherwise append a new setter and record a fresh `SetterRecord` (action: `created`). Flips dirty.
+- [X] T013 [US2] Implement `src/server/tools/set_variable.ts`. Validates name and value; surfaces a `declare_now | cancel` clarification if the variable isn't in the registry (FR-002 implies declaration first); surfaces the existing passage-not-found clarification when `passage_name` doesn't match. Idempotency: if the registry has a `SetterRecord` for this `(name, passageName)` pair, splice out the old block from the passage text and emit the replacement at the same offset (action: `replaced`); otherwise append a new setter and record a fresh `SetterRecord` (action: `created`). Flips dirty.
 
-- [ ] T014 [US2] Register `set_variable` in `src/guide/registry.ts`. Regenerate `docs/GUIDE.md`.
+- [X] T014 [US2] Register `set_variable` in `src/guide/registry.ts`. Regenerate `docs/GUIDE.md`.
 
-- [ ] T015 [US2] Add smoke section 23d to `src/smoke.ts`: from a Harlowe story with `playerName` declared, call `set_variable` on a non-Start passage twice with different values; assert the passage's text contains exactly one setter line for `playerName` and the value is the second call's value. Returned `action` field is `created` on first call, `replaced` on second.
+- [X] T015 [US2] Add smoke section 23d to `src/smoke.ts`: from a Harlowe story with `playerName` declared, call `set_variable` on a non-Start passage twice with different values; assert the passage's text contains exactly one setter line for `playerName` and the value is the second call's value. Returned `action` field is `created` on first call, `replaced` on second.
 
 **Checkpoint**: After T013–T015, smoke covers set_variable idempotency. SC-001 (under-5-tool-calls budget for a variable-gated branch) achievable end-to-end.
 
@@ -102,13 +102,13 @@ Single-project TypeScript package, layout unchanged from v0.5. New files under `
 
 ### Implementation tasks for User Story 3
 
-- [ ] T016 [US3] Implement `src/server/tools/list_variables.ts` (read-only). Returns the registry as documented in `contracts/tools.json` `list_variables.ok_response`. Reads exclusively from the registry; no re-parsing of passage text per FR-004 / clarify Q1.
+- [X] T016 [US3] Implement `src/server/tools/list_variables.ts` (read-only). Returns the registry as documented in `contracts/tools.json` `list_variables.ok_response`. Reads exclusively from the registry; no re-parsing of passage text per FR-004 / clarify Q1.
 
-- [ ] T017 [US3] Modify `src/server/tools/load_story.ts` to call `extractSetters` and `extractReaders` (T004) over every loaded passage after extwee parsing. Build the registry from the extracted records: deduplicate by variable name; `initialValue` taken from the Start passage's setter if present, otherwise the first setter encountered (research R6); readers without setters land in the registry with `loadedWithoutSetter: true` and `initialValue: null`. Sort setters and readers within each variable by passage name then offset (data-model invariants).
+- [X] T017 [US3] Modify `src/server/tools/load_story.ts` to call `extractSetters` and `extractReaders` (T004) over every loaded passage after extwee parsing. Build the registry from the extracted records: deduplicate by variable name; `initialValue` taken from the Start passage's setter if present, otherwise the first setter encountered (research R6); readers without setters land in the registry with `loadedWithoutSetter: true` and `initialValue: null`. Sort setters and readers within each variable by passage name then offset (data-model invariants).
 
-- [ ] T018 [US3] Register `list_variables` in `src/guide/registry.ts`. Regenerate `docs/GUIDE.md`.
+- [X] T018 [US3] Register `list_variables` in `src/guide/registry.ts`. Regenerate `docs/GUIDE.md`.
 
-- [ ] T019 [US3] Add smoke section 23e to `src/smoke.ts`: declare two variables across two passages → save → call `load_story` on the saved `.twee` → call `list_variables` → assert both variables present with correct passage names in `setter_passages` and `reader_passages`. Also test the `loadedWithoutSetter` path by hand-editing a `.twee` to include a reader without a setter and loading it.
+- [X] T019 [US3] Add smoke section 23e to `src/smoke.ts`: declare two variables across two passages → save → call `load_story` on the saved `.twee` → call `list_variables` → assert both variables present with correct passage names in `setter_passages` and `reader_passages`. Also test the `loadedWithoutSetter` path by hand-editing a `.twee` to include a reader without a setter and loading it.
 
 **Checkpoint**: After T016–T019, the round-trip case (FR-004a) is covered by smoke. SC-002 (the four-format fixture extension) is a follow-up task in Phase 7.
 
@@ -122,13 +122,13 @@ Single-project TypeScript package, layout unchanged from v0.5. New files under `
 
 ### Implementation tasks for User Story 4
 
-- [ ] T020 [US4] Implement `src/server/tools/delete_variable.ts`. Dirty guard first (matches feature 010's pattern in `load_story` / `create_story` — `save_first | discard_unsaved | cancel`). On clean (or discard-confirmed): iterate the variable's setters and readers; for each, splice the `block` out of the corresponding passage's text at the recorded `offset`. After every splice, update offsets on any sibling records in the same passage that lived downstream of the spliced block (decrement by the block length). Remove the variable from the registry. Returns `setters_removed`, `readers_removed`, `affected_passages` per `contracts/tools.json`.
+- [X] T020 [US4] Implement `src/server/tools/delete_variable.ts`. Dirty guard first (matches feature 010's pattern in `load_story` / `create_story` — `save_first | discard_unsaved | cancel`). On clean (or discard-confirmed): iterate the variable's setters and readers; for each, splice the `block` out of the corresponding passage's text at the recorded `offset`. After every splice, update offsets on any sibling records in the same passage that lived downstream of the spliced block (decrement by the block length). Remove the variable from the registry. Returns `setters_removed`, `readers_removed`, `affected_passages` per `contracts/tools.json`.
 
-- [ ] T021 [US4] Modify `src/server/tools/delete_passage.ts` to call a new helper `dropPassageFromRegistry(passageName)` that walks every variable in the registry, drops `SetterRecord` / `ReaderRecord` entries whose `passageName` matches, and removes any variable whose setter / reader lists both go empty (research R7 invariants). The existing incoming-link handling in delete_passage is unchanged; the registry sync is an additional step inside the existing handler.
+- [X] T021 [US4] Modify `src/server/tools/delete_passage.ts` to call a new helper `dropPassageFromRegistry(passageName)` that walks every variable in the registry, drops `SetterRecord` / `ReaderRecord` entries whose `passageName` matches, and removes any variable whose setter / reader lists both go empty (research R7 invariants). The existing incoming-link handling in delete_passage is unchanged; the registry sync is an additional step inside the existing handler.
 
-- [ ] T022 [US4] Register `delete_variable` in `src/guide/registry.ts`. Regenerate `docs/GUIDE.md`.
+- [X] T022 [US4] Register `delete_variable` in `src/guide/registry.ts`. Regenerate `docs/GUIDE.md`.
 
-- [ ] T023 [US4] Add smoke section 23f to `src/smoke.ts`: declare one variable; set it in two passages and insert readers in another two; save (clean state). Call `delete_variable({ name })`. Re-read the `.twee` and assert zero setters / readers for the name remain anywhere. Then dirty the story with a mutation and call `delete_variable` again; assert a `clarification_needed` with the three canonical answers. Resolve with `discard_unsaved` and confirm the delete completes.
+- [X] T023 [US4] Add smoke section 23f to `src/smoke.ts`: declare one variable; set it in two passages and insert readers in another two; save (clean state). Call `delete_variable({ name })`. Re-read the `.twee` and assert zero setters / readers for the name remain anywhere. Then dirty the story with a mutation and call `delete_variable` again; assert a `clarification_needed` with the three canonical answers. Resolve with `discard_unsaved` and confirm the delete completes.
 
 **Checkpoint**: After T020–T023, every user story has full coverage. SC-003 (real-length-story play test) is a manual check captured separately.
 

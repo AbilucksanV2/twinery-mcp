@@ -15,6 +15,12 @@ import * as validateStory from "../server/tools/validate_story.js";
 import * as saveStory from "../server/tools/save_story.js";
 import * as respondToClarification from "../server/tools/respond_to_clarification.js";
 import * as addImagePlaceholder from "../server/tools/add_image_placeholder.js";
+import * as declareVariable from "../server/tools/declare_variable.js";
+import * as readVariable from "../server/tools/read_variable.js";
+import * as insertVariableReader from "../server/tools/insert_variable_reader.js";
+import * as setVariable from "../server/tools/set_variable.js";
+import * as listVariables from "../server/tools/list_variables.js";
+import * as deleteVariable from "../server/tools/delete_variable.js";
 
 export interface ToolExample {
   title: string;
@@ -64,6 +70,12 @@ export const TOOL_REGISTRY: ToolMetadata[] = [
   bind("get_passage", getPassage as unknown as ToolModule),
   bind("validate_story", validateStory as unknown as ToolModule),
   bind("add_image_placeholder", addImagePlaceholder as unknown as ToolModule),
+  bind("declare_variable", declareVariable as unknown as ToolModule),
+  bind("read_variable", readVariable as unknown as ToolModule),
+  bind("insert_variable_reader", insertVariableReader as unknown as ToolModule),
+  bind("set_variable", setVariable as unknown as ToolModule),
+  bind("list_variables", listVariables as unknown as ToolModule),
+  bind("delete_variable", deleteVariable as unknown as ToolModule),
   bind("save_story", saveStory as unknown as ToolModule),
   bind("respond_to_clarification", respondToClarification as unknown as ToolModule),
 ];

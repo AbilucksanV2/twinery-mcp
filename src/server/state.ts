@@ -98,6 +98,49 @@ export function removeVariableByName(name: string): boolean {
   return true;
 }
 
+/**
+ * After splicing / inserting text in a passage, keep every cached setter and
+ * reader offset for that passage accurate: shift records at or after
+ * `fromOffset` by `delta` (positive for insertion, negative for deletion).
+ */
+export function shiftRecordsInPassage(
+  passageName: string,
+  fromOffset: number,
+  delta: number,
+): void {
+  if (active === null || delta === 0) return;
+  for (const v of active.variables) {
+    for (const s of v.setters) {
+      if (s.passageName === passageName && s.offset >= fromOffset) s.offset += delta;
+    }
+    for (const r of v.readers) {
+      if (r.passageName === passageName && r.offset >= fromOffset) r.offset += delta;
+    }
+  }
+}
+
+/** Replace the entire registry — used by load_story extract-on-load. */
+export function setVariables(variables: Variable[]): void {
+  if (active !== null) active.variables = variables;
+}
+
+/**
+ * Drop every setter / reader owned by a deleted passage from the registry, and
+ * remove any variable whose setter and reader lists both become empty
+ * (research R7). Called by delete_passage to keep the registry in sync.
+ */
+export function dropPassageFromRegistry(passageName: string): void {
+  if (active === null) return;
+  for (let i = active.variables.length - 1; i >= 0; i--) {
+    const v = active.variables[i]!;
+    v.setters = v.setters.filter((s) => s.passageName !== passageName);
+    v.readers = v.readers.filter((r) => r.passageName !== passageName);
+    if (v.setters.length === 0 && v.readers.length === 0) {
+      active.variables.splice(i, 1);
+    }
+  }
+}
+
 export class NoActiveStoryError extends Error {
   constructor() {
     super("No active story. Call create_story first.");

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { requireActiveStory, setDirty } from "../state.js";
+import { requireActiveStory, setDirty, dropPassageFromRegistry } from "../state.js";
 import { incomingTo, removeIncomingLinkMarkup } from "../../graph/links.js";
 import { ClarificationResponse, needClarification } from "../clarification.js";
 
@@ -109,6 +109,10 @@ export async function handler(args: Args): Promise<object | ClarificationRespons
   }
 
   story.removePassageByName(args.name);
+
+  // Keep the variable registry in sync — drop setters / readers owned by the
+  // deleted passage, and any variable left with no setters and no readers.
+  dropPassageFromRegistry(args.name);
 
   const placeholdersRemoved: string[] = [];
   for (let i = imagePlaceholders.length - 1; i >= 0; i--) {

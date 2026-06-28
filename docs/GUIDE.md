@@ -21,6 +21,12 @@ The tool surface is deliberately small and verb-shaped (think UnityMCP / GodotMC
 - **`get_passage`** — Return a single passage in full — name, tags, position, size, text, and its outgoing links.
 - **`validate_story`** — Run the full integrity sweep: broken links, orphan passages, duplicate names, IFID shape, and start-passage validity.
 - **`add_image_placeholder`** — Insert an image placeholder in a passage and return the exact filename and folder path where the author must drop the image.
+- **`declare_variable`** — Declare a story-level variable and emit a format-correct setter into the active story's Start passage.
+- **`read_variable`** — Read-only probe — return the current declared / set value of a named variable plus how many setters and readers reference it.
+- **`insert_variable_reader`** — Insert a format-correct reader expression for a declared variable into a passage.
+- **`set_variable`** — Add or replace a setter for a declared variable inside a named passage.
+- **`list_variables`** — Return every declared variable in the active story with its type, initial value, and the passages that set or read it.
+- **`delete_variable`** — Atomically remove every setter and every reader for a named variable from the active story's passage text, then drop it from the registry.
 - **`save_story`** — Persist the active story as <slug>.twee and <slug>.html into a directory, plus a sibling assets/<slug>/ drop zone.
 - **`respond_to_clarification`** — Resolve a previously-returned clarification_needed payload by providing the author's answer.
 
@@ -396,6 +402,157 @@ Insert an image placeholder in a passage and return the exact filename and folde
 ```
 
 Server reports e.g. assets/<story-slug>/ancient-tree.png — drop a file there and the played HTML will load it automatically.
+
+### `declare_variable`
+
+Declare a story-level variable and emit a format-correct setter into the active story's Start passage. Omit `initial` to declare the name only (no setter). Rejects names reserved by the active format; asks how to resolve a name that's already declared.
+
+**Input**
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `name` | string | yes | — |
+| `initial` | union | null | no | — |
+
+**Surfaces a clarification when:**
+
+- name already declared: ask replace_initial | leave_as_is | cancel (no silent overwrite).
+- initial provided but no Start passage exists: ask cancel (create a passage first, then retry).
+
+**Example**
+
+*Declare the player's name with an initial value*
+
+```json
+{
+  "name": "playerName",
+  "initial": "the stranger"
+}
+```
+
+Emits e.g. (set: $playerName to "the stranger") into the Start passage for Harlowe.
+
+### `read_variable`
+
+Read-only probe — return the current declared / set value of a named variable plus how many setters and readers reference it. Returns a recoverable error (not a clarification) when the name isn't declared.
+
+**Input**
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `name` | string | yes | — |
+
+**Example**
+
+*Check the current value and usage of playerName*
+
+```json
+{
+  "name": "playerName"
+}
+```
+
+### `insert_variable_reader`
+
+Insert a format-correct reader expression for a declared variable into a passage. By default the reader lands immediately before the first trailing [[...]] link block so it renders inside the prose, not after the choices. Pass `offset` to place it at an exact character index.
+
+**Input**
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `passage_name` | string | yes | — |
+| `name` | string | yes | — |
+| `offset` | number | no | — |
+
+**Surfaces a clarification when:**
+
+- variable not declared: ask declare_now | cancel.
+- passage_name does not exist: ask which passage was meant (valid answers = existing passage names).
+
+**Example**
+
+*Show the player's name in a greeting passage*
+
+```json
+{
+  "passage_name": "Greeting",
+  "name": "playerName"
+}
+```
+
+Emits e.g. $playerName (Harlowe) before any trailing links in Greeting.
+
+### `set_variable`
+
+Add or replace a setter for a declared variable inside a named passage. Idempotent within a passage — calling it twice for the same variable in the same passage overwrites the existing setter rather than stacking a second one.
+
+**Input**
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `passage_name` | string | yes | — |
+| `name` | string | yes | — |
+| `value` | union | yes | — |
+
+**Surfaces a clarification when:**
+
+- variable not declared: ask declare_now | cancel.
+- passage_name does not exist: ask which passage was meant (valid answers = existing passage names).
+
+**Example**
+
+*Change the player's name when they pick it*
+
+```json
+{
+  "passage_name": "DecideName",
+  "name": "playerName",
+  "value": "Mira"
+}
+```
+
+### `list_variables`
+
+Return every declared variable in the active story with its type, initial value, and the passages that set or read it. Reads from the in-memory registry — populated by declare_variable / set_variable this session, or extracted from passage text on load_story.
+
+**Input**
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+
+**Example**
+
+*Inspect all variables in the active story*
+
+```json
+{}
+```
+
+### `delete_variable`
+
+Atomically remove every setter and every reader for a named variable from the active story's passage text, then drop it from the registry. Honors the unsaved-changes guard from feature 010 (pass discard_unsaved: true to override).
+
+**Input**
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `name` | string | yes | — |
+| `discard_unsaved` | boolean | no | — |
+
+**Surfaces a clarification when:**
+
+- active story has unsaved changes AND discard_unsaved is not set: ask save_first | discard_unsaved | cancel.
+- variable not declared: returns a recoverable error (not a clarification).
+
+**Example**
+
+*Remove a variable that's no longer needed*
+
+```json
+{
+  "name": "playerName"
+}
+```
 
 ### `save_story`
 

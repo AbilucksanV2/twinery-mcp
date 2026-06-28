@@ -9,7 +9,9 @@ import {
   getActiveStory,
   markLoaded,
   setActiveStory,
+  setVariables,
 } from "../state.js";
+import { buildRegistryFromStory } from "../../twine/variables.js";
 import { ClarificationResponse, needClarification } from "../clarification.js";
 import * as saveStory from "./save_story.js";
 
@@ -109,6 +111,15 @@ export async function handler(args: Args): Promise<object | ClarificationRespons
 
   setActiveStory(loaded, slug, format);
   markLoaded(dirname(absPath));
+
+  // Rebuild the variable registry from the loaded passage text (FR-004a).
+  setVariables(
+    buildRegistryFromStory(
+      loaded.passages.map((p) => ({ name: p.name, text: p.text })),
+      loaded.start,
+      format,
+    ),
+  );
 
   const validation = computeValidation(loaded);
 

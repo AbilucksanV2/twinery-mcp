@@ -127,6 +127,56 @@ export function emitSetter(
   }
 }
 
+export interface SetterInsertion {
+  /** The full passage text after the setter was inserted. */
+  text: string;
+  /** Character offset where the setter block starts in the new text. */
+  offset: number;
+  /** The exact setter substring inserted (includes its trailing newline). */
+  block: string;
+}
+
+/**
+ * Insert a format-correct setter for `name = value` into `passageText`,
+ * returning the new text plus the offset / block of the inserted setter.
+ *
+ * Harlowe / SugarCube / Snowman append the setter to the end of the passage
+ * (a separating newline is added when the body doesn't already end in one).
+ * Chapbook places the setter in the vars section above the `--` separator,
+ * creating the section if the passage doesn't have one yet (research R2).
+ */
+export function insertSetterIntoText(
+  format: StoryFormat,
+  passageText: string,
+  name: string,
+  value: string | number | boolean,
+): SetterInsertion {
+  const block = emitSetter(format, name, value);
+
+  if (format === "Chapbook") {
+    const sep = passageText.match(/^--[ \t]*$/m);
+    if (sep) {
+      const offset = sep.index!;
+      const text = passageText.slice(0, offset) + block + passageText.slice(offset);
+      return { text, offset, block };
+    }
+    // No vars section yet — create one ahead of the existing prose.
+    const text = `${block}--\n${passageText}`;
+    return { text, offset: 0, block };
+  }
+
+  const prefix = passageText.length > 0 && !passageText.endsWith("\n") ? "\n" : "";
+  const offset = passageText.length + prefix.length;
+  const text = passageText + prefix + block;
+  return { text, offset, block };
+}
+
+/** Reported type for tool responses — "null" when declared-only / reader-only. */
+export function reportedType(v: Variable): "string" | "number" | "boolean" | "null" {
+  if (v.initialValue === null && v.setters.length === 0) return "null";
+  return v.type;
+}
+
 /** Format-correct inline reader expression for `name`. */
 export function emitReader(format: StoryFormat, name: string): string {
   switch (format) {
@@ -222,6 +272,83 @@ function matchReaders(text: string, re: RegExp): ExtractedReader[] {
     out.push({ name: m[1]!, offset: m.index!, block: m[0]! });
   }
   return out;
+}
+
+// ---------------------------------------------------------------------------
+// Extract-on-load registry builder (T017 support) — research R6
+// ---------------------------------------------------------------------------
+
+export interface PassageLike {
+  name: string;
+  text: string;
+}
+
+/**
+ * Rebuild the variable registry from the setter / reader text of every passage.
+ * Deduplicates by variable name; initialValue comes from the Start passage's
+ * setter when present, otherwise the first setter encountered. Readers found
+ * with no setter anywhere land with `loadedWithoutSetter: true`.
+ */
+export function buildRegistryFromStory(
+  passages: PassageLike[],
+  startName: string,
+  format: StoryFormat,
+): Variable[] {
+  const byName = new Map<string, Variable>();
+  const ensure = (name: string): Variable => {
+    let v = byName.get(name);
+    if (v === undefined) {
+      v = { name, type: "string", initialValue: null, setters: [], readers: [] };
+      byName.set(name, v);
+    }
+    return v;
+  };
+
+  for (const p of passages) {
+    const setters = extractSetters(format, p.text);
+    const setterRanges: Array<[number, number]> = [];
+    for (const s of setters) {
+      ensure(s.name).setters.push({
+        passageName: p.name,
+        value: s.value,
+        offset: s.offset,
+        block: s.block,
+      });
+      setterRanges.push([s.offset, s.offset + s.block.length]);
+    }
+    // Readers that fall inside a setter block (e.g. the `$name` inside a Harlowe
+    // `(set: $name to ...)`) are part of the setter, not standalone reads.
+    for (const r of extractReaders(format, p.text)) {
+      const insideSetter = setterRanges.some(([lo, hi]) => r.offset >= lo && r.offset < hi);
+      if (insideSetter) continue;
+      ensure(r.name).readers.push({ passageName: p.name, offset: r.offset, block: r.block });
+    }
+  }
+
+  const byPassageThenOffset = (
+    a: { passageName: string; offset: number },
+    b: { passageName: string; offset: number },
+  ): number => a.passageName.localeCompare(b.passageName) || a.offset - b.offset;
+
+  const result: Variable[] = [];
+  for (const v of byName.values()) {
+    // Resolve initial value before sorting (the source is the first setter
+    // encountered in passage order, or the Start passage's setter).
+    const startSetter = v.setters.find((s) => s.passageName === startName);
+    const source = startSetter ?? v.setters[0];
+    if (source !== undefined) {
+      v.initialValue = source.value;
+      v.type = inferType(source.value);
+    } else {
+      v.initialValue = null;
+      v.loadedWithoutSetter = true;
+    }
+    v.setters.sort(byPassageThenOffset);
+    v.readers.sort(byPassageThenOffset);
+    if (v.setters.length === 0 && v.readers.length === 0) continue; // never hold ghosts
+    result.push(v);
+  }
+  return result;
 }
 
 // ---------------------------------------------------------------------------

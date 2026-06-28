@@ -1,5 +1,6 @@
 import { Story } from "extwee";
 import { StoryFormat } from "../twine/formats.js";
+import { Variable } from "../twine/variables.js";
 
 export interface ImagePlaceholderRecord {
   label: string;
@@ -17,6 +18,7 @@ interface ActiveStory {
   lastSavedAt: number | null;
   dirty: boolean;
   imagePlaceholders: ImagePlaceholderRecord[];
+  variables: Variable[];
 }
 
 let active: ActiveStory | null = null;
@@ -30,6 +32,7 @@ export function setActiveStory(story: Story, slug: string, format: StoryFormat):
     lastSavedAt: null,
     dirty: false,
     imagePlaceholders: [],
+    variables: [],
   };
 }
 
@@ -64,6 +67,35 @@ export function markLoaded(dir: string): void {
     active.lastSavedAt = Date.now();
     active.dirty = false;
   }
+}
+
+// ---------------------------------------------------------------------------
+// Variable registry helpers (feature 011). The registry mirrors the setter /
+// reader text that lives in passage bodies; it is rebuilt on every load_story.
+// ---------------------------------------------------------------------------
+
+export function getVariableByName(name: string): Variable | undefined {
+  if (active === null) return undefined;
+  return active.variables.find((v) => v.name === name);
+}
+
+/** Insert the variable, or replace the existing entry with the same name. */
+export function upsertVariable(variable: Variable): void {
+  if (active === null) return;
+  const idx = active.variables.findIndex((v) => v.name === variable.name);
+  if (idx === -1) {
+    active.variables.push(variable);
+  } else {
+    active.variables[idx] = variable;
+  }
+}
+
+export function removeVariableByName(name: string): boolean {
+  if (active === null) return false;
+  const idx = active.variables.findIndex((v) => v.name === name);
+  if (idx === -1) return false;
+  active.variables.splice(idx, 1);
+  return true;
 }
 
 export class NoActiveStoryError extends Error {

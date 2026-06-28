@@ -28,7 +28,7 @@ Single-project TypeScript package, layout unchanged from v0.5. New files under `
 
 **Purpose**: Verify the assumption that extwee passes setter / reader text through unchanged. This is already proved by F-FIXTURES — recording it here makes the dependency explicit.
 
-- [ ] T001 Verify extwee passage-text round-trip preserves arbitrary substrings byte-for-byte across all four formats (Harlowe / SugarCube / Chapbook / Snowman) by adding a one-off check to `specs/011-variables/research.md` § R1 — if the smoke fixture run after this feature shows any drift, the feature blocks. (No code change; checkpoint only.)
+- [X] T001 Verify extwee passage-text round-trip preserves arbitrary substrings byte-for-byte across all four formats (Harlowe / SugarCube / Chapbook / Snowman) by adding a one-off check to `specs/011-variables/research.md` § R1 — if the smoke fixture run after this feature shows any drift, the feature blocks. (No code change; checkpoint only.)
 
 ---
 
@@ -38,17 +38,17 @@ Single-project TypeScript package, layout unchanged from v0.5. New files under `
 
 **⚠️ CRITICAL**: No user-story work can begin until this phase is complete.
 
-- [ ] T002 Create `src/twine/variables.ts` exporting `Variable`, `SetterRecord`, `ReaderRecord` TypeScript types matching `specs/011-variables/data-model.md`. Same file exports `RESERVED_NAMES: Record<StoryFormat, Set<string>>` populated with the v1 conservative sets from `specs/011-variables/contracts/tools.json` `reserved_names`. Also export `isReserved(format, name): boolean` and `validateVariableName(name): { ok: true } | { ok: false, message: string }` enforcing `^[A-Za-z_][A-Za-z0-9_]*$`.
+- [X] T002 Create `src/twine/variables.ts` exporting `Variable`, `SetterRecord`, `ReaderRecord` TypeScript types matching `specs/011-variables/data-model.md`. Same file exports `RESERVED_NAMES: Record<StoryFormat, Set<string>>` populated with the v1 conservative sets from `specs/011-variables/contracts/tools.json` `reserved_names`. Also export `isReserved(format, name): boolean` and `validateVariableName(name): { ok: true } | { ok: false, message: string }` enforcing `^[A-Za-z_][A-Za-z0-9_]*$`.
 
-- [ ] T003 In `src/twine/variables.ts`, add `emitSetter(format, name, value): string` and `emitReader(format, name): string` — eight branches total (one per `(format, role)` pair from the format-syntax matrix in `contracts/tools.json`). String values get the format-correct quoting per spec FR-009; numbers and booleans emit unquoted as JavaScript literals (`true` / `false` in Chapbook too per clarify Q4). Each setter is returned with a trailing newline included so it slots cleanly into existing passage text.
+- [X] T003 In `src/twine/variables.ts`, add `emitSetter(format, name, value): string` and `emitReader(format, name): string` — eight branches total (one per `(format, role)` pair from the format-syntax matrix in `contracts/tools.json`). String values get the format-correct quoting per spec FR-009; numbers and booleans emit unquoted as JavaScript literals (`true` / `false` in Chapbook too per clarify Q4). Each setter is returned with a trailing newline included so it slots cleanly into existing passage text.
 
-- [ ] T004 In `src/twine/variables.ts`, add `extractSetters(format, passageText): Array<{ name, value, offset, block }>` and `extractReaders(format, passageText): Array<{ name, offset, block }>` using per-format regex (Harlowe `(set: \$X to V)`, SugarCube `<<set \$X to V>>`, Chapbook `name: value` lines above the `--` separator, Snowman `<% s.X = V %>`). Readers: Harlowe `\$name`, SugarCube `<<= \$name>>`, Chapbook `{name}`, Snowman `<%= s.name %>`. Per research R6, the Chapbook extractor MUST split on the first standalone `--` line and only treat the upper half as the vars section.
+- [X] T004 In `src/twine/variables.ts`, add `extractSetters(format, passageText): Array<{ name, value, offset, block }>` and `extractReaders(format, passageText): Array<{ name, offset, block }>` using per-format regex (Harlowe `(set: \$X to V)`, SugarCube `<<set \$X to V>>`, Chapbook `name: value` lines above the `--` separator, Snowman `<% s.X = V %>`). Readers: Harlowe `\$name`, SugarCube `<<= \$name>>`, Chapbook `{name}`, Snowman `<%= s.name %>`. Per research R6, the Chapbook extractor MUST split on the first standalone `--` line and only treat the upper half as the vars section.
 
-- [ ] T005 In `src/twine/variables.ts`, add `findInsertOffsetBeforeTrailingLinks(format, passageText): number` that returns the character index immediately before the first trailing `[[...]]` link block, walking past trailing whitespace from the end of the text. If no trailing-link block exists, return `passageText.length` (append). Use the link grammars consolidated in `src/twine/formats.ts` (arrow / pipe per format).
+- [X] T005 In `src/twine/variables.ts`, add `findInsertOffsetBeforeTrailingLinks(format, passageText): number` that returns the character index immediately before the first trailing `[[...]]` link block, walking past trailing whitespace from the end of the text. If no trailing-link block exists, return `passageText.length` (append). Use the link grammars consolidated in `src/twine/formats.ts` (arrow / pipe per format).
 
-- [ ] T006 Modify `src/server/state.ts`: add `variables: Variable[]` to the `ActiveStory` interface; `setActiveStory()` initialises it to `[]`. Export helper functions `getVariableByName(name)`, `upsertVariable(v)`, `removeVariableByName(name)`, plus a `markDirty()` helper if one doesn't exist yet so every variable tool can flip the dirty flag in one place (FR-013). Existing callers of `setActiveStory` need no signature change.
+- [X] T006 Modify `src/server/state.ts`: add `variables: Variable[]` to the `ActiveStory` interface; `setActiveStory()` initialises it to `[]`. Export helper functions `getVariableByName(name)`, `upsertVariable(v)`, `removeVariableByName(name)`, plus a `markDirty()` helper if one doesn't exist yet so every variable tool can flip the dirty flag in one place (FR-013). Existing callers of `setActiveStory` need no signature change.
 
-- [ ] T007 `npm run build && npm run typecheck` clean; smoke (stdio + http + cli + fixtures) still green. No tool work begins until this checkpoint is met.
+- [X] T007 `npm run build && npm run typecheck` clean; smoke (stdio + http + cli + fixtures) still green. No tool work begins until this checkpoint is met.
 
 **Checkpoint**: Foundational helpers compile, types exported, smoke green.
 

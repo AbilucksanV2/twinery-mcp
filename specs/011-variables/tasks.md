@@ -138,19 +138,19 @@ Single-project TypeScript package, layout unchanged from v0.5. New files under `
 
 **Purpose**: Docs, version bump, fixture extension, backlog hygiene, final Constitution sweep.
 
-- [ ] T024 [P] Update `README.md` tool table — the 15-tool list becomes 21 tools. Add a short "Variables" section near the Image-placeholder pattern explaining the format-syntax matrix at one glance. Reference [`specs/011-variables/quickstart.md`](specs/011-variables/quickstart.md) for the walkthrough.
+- [X] T024 [P] Update `README.md` tool table — the 15-tool list becomes 21 tools. Add a short "Variables" section near the Image-placeholder pattern explaining the format-syntax matrix at one glance. Reference [`specs/011-variables/quickstart.md`](specs/011-variables/quickstart.md) for the walkthrough.
 
-- [ ] T025 [P] Final `npm run guide:generate` to regenerate `docs/GUIDE.md` end-to-end. CI's guide-drift gate will enforce this on every push.
+- [X] T025 [P] Final `npm run guide:generate` to regenerate `docs/GUIDE.md` end-to-end. CI's guide-drift gate will enforce this on every push.
 
-- [ ] T026 [P] [US3] Fixture extension for SC-002: add one variable per format to the existing `fixtures/{harlowe,sugarcube,chapbook,snowman}/source.twee`. Setter in Start, reader in a non-Start passage. The existing `src/fixtures.ts` runner compares passage text structurally so the new setters / readers are exercised by the existing 12 round-trip checks (Twee↔Twee, Twee↔HTML↔Twee, Twee↔JSON↔Twee) without any runner change.
+- [X] T026 [P] [US3] Fixture extension for SC-002: add one variable per format to the existing `fixtures/{harlowe,sugarcube,chapbook,snowman}/source.twee`. Setter in Start, reader in a non-Start passage. The existing `src/fixtures.ts` runner compares passage text structurally so the new setters / readers are exercised by the existing 12 round-trip checks (Twee↔Twee, Twee↔HTML↔Twee, Twee↔JSON↔Twee) without any runner change.
 
-- [ ] T027 Update `tracking/backlog.csv` F-VARIABLES row → `in_progress` with branch `011-variables`. Per the LLM-session discipline (CLAUDE.md), update the row in place.
+- [X] T027 Update `tracking/backlog.csv` F-VARIABLES row → `in_progress` with branch `011-variables`. Per the LLM-session discipline (CLAUDE.md), update the row in place.
 
-- [ ] T028 Run `npm run build && npm run smoke` (full stdio + http + cli + fixtures) one last time. Capture combined wall-clock and confirm the SC-005 invariant (smoke chain stays green; no new ignored sections).
+- [X] T028 Run `npm run build && npm run smoke` (full stdio + http + cli + fixtures) one last time. Capture combined wall-clock and confirm the SC-005 invariant (smoke chain stays green; no new ignored sections).
 
-- [ ] T029 Bump `package.json` version to `0.6.0-rc1`. `npm install` should be a no-op (SC-004 — zero new deps).
+- [X] T029 Bump `package.json` version to `0.6.0-rc1`. `npm install` should be a no-op (SC-004 — zero new deps).
 
-- [ ] T030 Final Constitution Check sweep — re-read `.specify/memory/constitution.md`, confirm all five principles still pass post-implementation. Update the F-VARIABLES row to `done` with PR# + merge commit hash post-merge.
+- [X] T030 Final Constitution Check sweep — re-read `.specify/memory/constitution.md`, confirm all five principles still pass post-implementation. Update the F-VARIABLES row to `done` with PR# + merge commit hash post-merge.
 
 ---
 

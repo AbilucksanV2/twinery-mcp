@@ -19,6 +19,7 @@ window.fixtureToken = "harlowe-fixture-v1";
 
 :: Start
 (set: $hasKey to false)
+(set: $playerTitle to "wanderer")
 You stand before a heavy oak door.
 [[Search the floor->Search]]
 [[Try the handle->Try Handle]]
@@ -34,4 +35,4 @@ A small iron key glints among the leaves.
 [[Search the floor->Search]]]
 
 :: Cellar [ending]
-A cool cellar greets you. **The end.**
+A cool cellar greets you, $playerTitle. **The end.**

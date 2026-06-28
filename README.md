@@ -18,7 +18,7 @@ multi-format story testing, automated tests, CI, MCP elicitation) see
 
 ## What's in v0.4
 
-**15 MCP tools**:
+**21 MCP tools**:
 
 | Tool | Purpose |
 |------|---------|
@@ -35,6 +35,12 @@ multi-format story testing, automated tests, CI, MCP elicitation) see
 | `get_passage` | Read-only full passage dump including text and outgoing links. |
 | `validate_story` | Integrity sweep: broken links, orphans, duplicate names, IFID shape, start-passage validity. |
 | `add_image_placeholder` | Mark a spot in a passage for an image and report the exact file path + filename the author must drop. |
+| `declare_variable` | Declare a story-level variable and emit a format-correct setter into the Start passage (omit `initial` to declare the name only). Rejects format-reserved names; asks before overwriting an existing declaration. |
+| `read_variable` | Read-only probe — current value, type, and setter / reader counts for a variable. Returns a recoverable `kind: error` (not a clarification) on an unknown name. |
+| `insert_variable_reader` | Insert a format-correct reader expression into a passage. Defaults to link-aware placement — immediately before the first trailing `[[...]]` block so the value renders inside the prose, not after the choices. |
+| `set_variable` | Add or replace a setter inside a passage. Idempotent within a passage — re-setting the same variable overwrites rather than stacking a second setter. |
+| `list_variables` | Read-only registry view — every variable with its type, initial value, and the passages that set or read it. |
+| `delete_variable` | Atomically strip every setter and reader for a variable from passage text, then drop it from the registry. Honors the unsaved-changes guard. |
 | `save_story` | Write `<slug>.twee` and `<slug>.html` into a folder, plus a sibling `assets/<slug>/` drop zone. Defaults `output_dir` to the active story's last-saved (or last-loaded) path; asks only when nothing is remembered. Reports any image placeholder whose file is still missing. |
 | `respond_to_clarification` | Resolve any question the server asked during another tool call (needed when your MCP client doesn't support MCP elicitation). |
 
@@ -56,6 +62,28 @@ a file there and the played HTML loads it automatically; skip it and the compile
 HTML shows a labeled dashed-border fallback box instead of a broken-image icon.
 `save_story` reports every placeholder whose file is still missing under
 `pending_image_drops`.
+
+**Variables pattern**: `declare_variable`, `set_variable`,
+`insert_variable_reader`, `read_variable`, `list_variables`, and
+`delete_variable` let an LLM author story-level state without writing
+format-specific macro syntax by hand. The variable lives as setter / reader
+text inside passage bodies (the registry mirrors that text and is rebuilt from
+it on `load_story`), so it round-trips through `save_story` and plays in the
+Twine 2 editor. The server emits the format-correct syntax for the active
+story's declared format:
+
+| Format    | Setter (string)                | Setter (number / boolean)   | Reader          |
+|-----------|--------------------------------|-----------------------------|-----------------|
+| Harlowe   | `(set: $name to "value")`      | `(set: $name to 42 / true)` | `$name`         |
+| SugarCube | `<<set $name to "value">>`     | `<<set $name to 42 / true>>`| `<<= $name>>`   |
+| Chapbook  | `name: 'value'` (vars section) | `name: 42 / true`           | `{name}`        |
+| Snowman   | `<% s.name = 'value' %>`       | `<% s.name = 42 / true %>`  | `<%= s.name %>` |
+
+Chapbook variables live in the vars section above the `--` separator; the
+server creates that section when a passage doesn't have one. Booleans are
+emitted as `true` / `false` (not `yes` / `no`) on every format. See
+[`specs/011-variables/quickstart.md`](specs/011-variables/quickstart.md) for an
+end-to-end walkthrough.
 
 ## Prerequisites
 

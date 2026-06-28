@@ -21,6 +21,7 @@ window.s.hasKey = false;
 
 :: Start
 <% s.hasKey = false; %>
+<% s.playerTitle = 'wanderer' %>
 You stand before a heavy oak door.
 [[Search the floor|Search]]
 [[Try the handle|Try Handle]]
@@ -36,4 +37,4 @@ A small iron key glints among the leaves.
 [[Search the floor|Search]]<% } %>
 
 :: Cellar [ending]
-A cool cellar greets you. The end.
+A cool cellar greets you, <%= s.playerTitle %>. The end.

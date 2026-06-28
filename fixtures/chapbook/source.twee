@@ -19,6 +19,7 @@ window.fixtureToken = "chapbook-fixture-v1";
 
 :: Start
 hasKey: false
+playerTitle: 'wanderer'
 --
 You stand before a heavy oak door.
 [[Search the floor->Search]]
@@ -40,4 +41,4 @@ The handle won't budge.
 [continue]
 
 :: Cellar [ending]
-A cool cellar greets you. The end.
+A cool cellar greets you, {playerTitle}. The end.

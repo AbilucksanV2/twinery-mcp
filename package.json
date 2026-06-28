@@ -1,7 +1,7 @@
 {
   "name": "twinery-mcp-poc",
-  "version": "0.5.0",
-  "description": "POC of an MCP server that lets an LLM author and iterate on branching Twine 2 stories — 15-tool authoring surface with the open / inspect / save loop, image placeholders, an LLM-facing guide resource, and a CLI-flag-selectable Streamable-HTTP transport for the connect-once dev loop (stdio remains the default; --transport http opts in). See specs/001-mcp-server-mvp/ for the full v1.0 plan.",
+  "version": "0.6.0-rc1",
+  "description": "POC of an MCP server that lets an LLM author and iterate on branching Twine 2 stories — 21-tool authoring surface with the open / inspect / save loop, variable management, image placeholders, an LLM-facing guide resource, and a CLI-flag-selectable Streamable-HTTP transport for the connect-once dev loop (stdio remains the default; --transport http opts in). See specs/001-mcp-server-mvp/ for the full v1.0 plan.",
   "type": "module",
   "bin": {
     "twinery-mcp-poc": "./dist/server/index.js"

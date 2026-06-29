@@ -1,9 +1,18 @@
 # Tracking
 
+Two files work together:
+
+- **[PROGRESS.md](PROGRESS.md)** — the human-readable status board (checkbox
+  style). Read this first to see what's done, in flight, and next, across
+  epics → features → tasks and the demo Twine stories. Agents tick boxes here
+  in the same change that does the work.
+- **[backlog.csv](backlog.csv)** — the append-only machine record (below).
+
 A single, append-only CSV at [backlog.csv](backlog.csv) that tracks every
 epic, feature, and task in the project. One file. Three layers. No tooling
 required to read or edit it — open it in any editor, spreadsheet, or `git
-diff`.
+diff`. `PROGRESS.md` is the friendly rollup of the same data; keep the two
+reconciled.
 
 ## Layers
 

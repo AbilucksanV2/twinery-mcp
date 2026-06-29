@@ -51,6 +51,18 @@ See `tracking/README.md` for the full column conventions, status
 lifecycle, and how rows get promoted through Spec Kit into
 `specs/NNN-*/` directories.
 
+## Progress board — keep it current
+
+`tracking/PROGRESS.md` is the human-readable status board (checkbox style)
+that rolls up every epic, feature, task, and demo story. Whenever you
+START or FINISH a task, feature, or demo story, tick its box and update
+the relevant status line **in the same change that did the work**. It is
+the friendly view; `backlog.csv` is the machine record and each feature's
+`specs/NNN-*/tasks.md` is the granular list — keep all three reconciled,
+never let the board drift. A human reads `PROGRESS.md` first to understand
+where things stand, so treat it as a first-class deliverable, not an
+afterthought.
+
 ## Constitution gate
 
 Every plan-level change MUST pass the five principles in

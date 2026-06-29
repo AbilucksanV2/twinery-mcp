@@ -216,3 +216,128 @@ stay in sync when storage relocates or vanishes. Same invariant
 - *Leave the registry stale; reconcile on next save_story*: rejected
   — `list_variables` would lie about setter / reader counts until the
   next save call.
+
+## R8 — Logic authoring across the four formats (forward-looking)
+
+**Compiled 2026-06-29** from the official format docs (SugarCube, Harlowe,
+Chapbook, Snowman) and the IFTF Twine Cookbook, plus community sources. This
+section is forward-looking: variables (this feature) are the foundation, but
+the *logic* features that build on them (computed updates, conditionals,
+widgets/popups, init-passage placement, the logic guide) need a single shared
+reference. It is the spec input for the E07 backlog rows F-VAR-MATH,
+F-CONDITIONALS, F-WIDGETS, F-VAR-INIT, F-LOGIC-GUIDE, F-STATBLOCK.
+
+**Central constraint:** in Twine, logic lives *inside passage text* as
+format-specific markup — there is no separate logic editor. The *concept* (a
+stat, a gated choice, a clock) is format-agnostic; the *syntax* is not. So the
+MCP must **teach the active format's dialect** — a model that averages across
+the four dialects it saw in training emits mixed, broken markup. That
+mixed-dialect output is the single highest-probability failure mode (confirmed
+across all five research streams).
+
+### R8.1 — Cross-format capability matrix
+
+| Capability | SugarCube | Harlowe | Chapbook | Snowman |
+|---|---|---|---|---|
+| **Variable sigil** | `$story`, `_temp` | `$story`, `_temp` | bare `name` | `s.name` (prop on `window.story.state`) |
+| **Set (literal)** | `<<set $x to 5>>` | `(set: $x to 5)` | `x: 5` (above `--`) | `<% s.x = 5 %>` |
+| **Set (computed)** | `<<set $cash to $cash + 100>>` / `+=` / `++` | `(set: $cash to it + 100)` / `+=` | `cash: cash + 100` (eval once) | `<% s.cash = s.cash + 100 %>` |
+| **Print inline** | `$x` · `<<= $x>>` / `<<print>>` | `$x` · `(print: $x)` | `{x}` (no exprs) | `<%= s.x %>` |
+| **If / else** | `<<if>>``<<elseif>>``<<else>>``<</if>>` | `(if:)[…](else-if:)[…](else:)[…]` (hooks) | `[if c]``[else]``[continue]` (modifiers) | `<% if(){ %>…<% }else{ %>…<% } %>` |
+| **Operators** | `is`/`isnot`/`gt`/`gte`/`lt`/`lte`/`and`/`or`/`not` (or JS) | `is`/`is not`/`>`/`>=`/`and`/`or`/`not`/`contains` (words) | JS `===`/`>=`/`&&`/`!` inside `[if]` | JS `===`/`>=`/`&&`/`!` |
+| **Gated link** | `<<if c>>[[T->P]]<</if>>` | `(if: c)[[[T->P]]]` | `[if c]`⏎`[[T->P]]` | `<% if(c){ %>[[T->P]]<% } %>` |
+| **Set on link click** | `[[T->P][$x to 5]]` · `<<link>>`+`<<set>>` | `(link-reveal-goto:"t","P")[(set:…)]` | **none** — set in target's vars section | top of target · jQuery on `a[data-passage]` |
+| **Reusable logic** | `<<widget>>` (passage tagged `widget`) | `(macro:)` (3.2+) / `(display:)` | custom JS inserts/modifiers · `[JavaScript]` | JS fns on `window.setup` (Story JS) |
+| **Popup / dialog** | `<<dialog>>`+`Dialog` API (core) · `<<notify>>` toast (**3rd-party**) | `(dialog:)` (3.1+) / `(alert:)` | **none** native | **none** native |
+| **Init-once passage** | `StoryInit` (special name) | passage tagged `startup` | once-only vars section | `[script]` UserScript / Story JS |
+| **Per-move hook** | `PassageReady`/`PassageHeader`/`PassageFooter` | tags `header`/`footer` | header/footer passage | `[script]` + history events |
+| **Sidebar stat display** | `StoryCaption` | `header`/`footer` passage | header/footer passage | DOM injection |
+
+### R8.2 — Per-format gotchas the MCP must encode
+
+- **Harlowe** — `(if:)`/`(link:)` are *changers* that must be **immediately
+  followed by a hook `[ … ]`** (no operator); **word operators** (`is`, `and`,
+  not `==`/`&&`); gated link nests three brackets `(if: c)[[[T->P]]]`; vars
+  default to `0`; **no `StoryInit`** (use a `startup`-tagged passage); relative
+  set uses the `it` keyword; reuse is `(macro:)`/`(display:)`, never widgets.
+- **SugarCube** — `$` persists/saves, `_` is wiped each render; init in
+  **`StoryInit`**; set with `to`, compare with `is`/`gt`/…; every `<<if>>`/
+  `<<link>>`/`<<widget>>` needs its closing tag (**validate balance**);
+  setter-link `[[T|P][$x to 5]]` runs on click before nav; reuse = `<<widget>>`
+  in a `widget`-tagged passage; `<<dialog>>`+`Dialog` API are core but
+  **`<<notify>>` is a third-party (Chapel) macro** — never emit without the dep;
+  mid-passage `<<set>>` needs `<<replace "#id">>` to repaint.
+- **Chapbook** — state in the **vars section above `--`** (bare names, no `$`),
+  evaluated once top-to-bottom, no inserts/modifiers allowed there; display with
+  `{name}`; conditionals are **line modifiers** `[if]`/`[else]`/`[continue]`
+  (no nesting, no `else if`); **no setter-link** (set in the destination's vars
+  section, using `passage.from`); **no native popup**; guard run-once init with
+  `passage.visits`.
+- **Snowman** — raw JS `<% %>`/`<%= %>`/`<%- %>`; all state on
+  `window.story.state`, `s` aliased **only inside template tags** (not in Story
+  JS); conditionals are literal JS braces split across tags (mind the closing
+  `<% } %>`); links render to `<a data-passage>` — **no setter-link** (set atop
+  the target or bind jQuery); reuse = plain fns on `window.setup`; **no UI
+  helpers**; init must be idempotent (`if (s.x === undefined)`).
+
+### R8.3 — Format-agnostic patterns (the recipes)
+
+Each is one logic *shape*; the format selects the dialect (R8.1). These map 1:1
+to Twine Cookbook recipes.
+
+1. **Stat system** — declare+init once in the init passage; mutate on actions
+   via compound assignment on a link/button; **clamp** at min/max; display in
+   **one central place** (`StoryCaption`/header), never per-passage.
+2. **Day / time-period clock** — `day` + within-day index; advance on
+   "spend time" actions; roll over with modulo (`period = t % 4`,
+   `day = floor(t/4)+1`). Prefer the **manual counter** form; SugarCube's
+   `State.turns` clock ticks on *every* click (usually unwanted in a life-sim).
+3. **Inventory** — array of item names: add with `push`/`+`, test with
+   `includes`/`contains`, gate links on ownership.
+4. **Triggered event** — (a) a **header/footer passage** checks state every load
+   and fires ambient events centrally; (b) **in-passage** `if` blocks for
+   location/moment-specific events. Authors mix both.
+5. **Stat-change popup** — **mutate + notify in one idempotent unit** so they
+   can't drift and changes don't double-apply on re-render (SugarCube
+   `<<statChange>>`/widget with a unique id; Harlowe `(set:)`+`(replace:)` or
+   `(dialog:)`; Chapbook/Snowman DIY). Default to clamping.
+
+### R8.4 — Top gotchas an LLM author will hit
+
+1. Mixing dialects *(headline risk)*. 2. Forgetting to initialize. 3. Assignment
+vs comparison (`to`/`is`; `=` vs `===`). 4. Mid-passage `set` not repainting
+text/sidebar. 5. Temp vs story variable persistence. 6. Setter-link misuse.
+7. Double-applied stat changes on revisit/re-render. 8. Real-world clock vs
+in-game clock. 9. Chapbook vars-section re-runs every visit. 10. Exact
+tag/name spelling (`StoryInit`, `startup`, `header`, `widget`).
+
+### R8.5 — MCP design implications (→ E07 backlog)
+
+1. **Format bound to every emitted snippet**; docstrings carry the R8.1 matrix. → *F-LOGIC-GUIDE*
+2. **Init in the format's init passage as a guarantee** — today `declare_variable`
+   writes into Start; idiomatic is `StoryInit`/`startup`/vars-section/UserScript. → *F-VAR-INIT*
+3. **Variable manifest** (type, default, where shown, where mutated) extending
+   `ActiveStory.variables` to catch used-before-init / mutated-but-never-shown. → *F-VAR-INIT*
+4. **Computed/relative updates** (`$cash + 100`, `it`/`+=`/`++`). → *F-VAR-MATH*
+5. **Conditional rendering + gated choices** (hidden vs disabled; header/footer
+   event dispatcher). → *F-CONDITIONALS*
+6. **Mutation+notification as one tool** (`change_stat(name, delta, message?)`). → *F-WIDGETS + F-VAR-MATH*
+7. **Central stat-display tool** (`StoryCaption`/header). → *F-STATBLOCK*
+8. **Elicit the time model** (per-action vs per-nav) before generating a clock.
+9. **`validate_story` lint** — balanced tags; no `=` in a conditional; no
+   third-party macro without its dep; temp-var-expected-to-persist.
+10. **Teach, don't just emit** — enrich docstrings + `twinery://guide` with the
+    format-aware logic capability section. → *F-LOGIC-GUIDE*
+
+### R8.6 — Sources
+
+Official: SugarCube v2 docs (motoslave.net/sugarcube/2/docs); Harlowe 3 manual
+(twine2.neocities.org); Chapbook guide (klembot.github.io/chapbook/guide);
+Snowman 2 docs (videlais.github.io/snowman/2); Twine Cookbook
+(github.com/iftechfoundation/twine-cookbook — playerstatistics,
+conditionalstatements, arrays, turncounter, headersandfooters, modal in all
+four formats). Community: subjunctivegames.com (smarter stat changes); Chapel's
+custom-macros-for-sugarcube-2 (Dialog, `<<notify>>`, simple-inventory);
+github.com/aronedwards91/twine-life-rpg (working SugarCube life-sim).
+*Fetch note:* several `twinery.org/cookbook/*` pages 403 to automated fetches —
+read recipe source from the `iftechfoundation/twine-cookbook` GitHub repo.

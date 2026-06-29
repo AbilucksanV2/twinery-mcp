@@ -88,7 +88,7 @@
 - [ ] **F-INVENTORY** Inventory system (add/remove/has_item, list_inventory, inventory-gated links) 🔒 builds on F-VARIABLES
 - [ ] **F-STYLESHEETS** Rich stylesheet authoring (set/append stylesheet, per-tag style helpers)
 
-> 📄 **Logic research reference:** [`specs/research/twine-logic-authoring.md`](../specs/research/twine-logic-authoring.md) — cross-format syntax matrix, per-format gotchas, common patterns, and MCP design implications. Feeds every E07 logic feature.
+> 📄 **Logic research reference:** [`specs/011-variables/research.md` § R8](../specs/011-variables/research.md) — cross-format syntax matrix, per-format gotchas, common patterns, and MCP design implications. Feeds every E07 logic feature.
 
 ---
 
@@ -108,7 +108,7 @@ a real exercise of the server, not a unit test.
 
 - [x] **Logic-authoring research (2026-06-29)** — completed. Parallel research
   across SugarCube / Harlowe / Chapbook / Snowman + community/cookbook patterns.
-  Synthesized into [`specs/research/twine-logic-authoring.md`](../specs/research/twine-logic-authoring.md).
+  Synthesized into [`specs/011-variables/research.md` § R8](../specs/011-variables/research.md).
   Key finding: logic lives in passage text; the *concept* is format-agnostic but
   the *syntax* is not, so the MCP must **teach the dialect** — mixed-dialect
   output is the headline failure mode. Plan below.

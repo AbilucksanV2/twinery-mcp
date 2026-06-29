@@ -154,6 +154,38 @@ above.
   (`png/jpg/jpeg/gif/webp`). Adds DOM-level complexity due to Twine format
   passages handling SVG inconsistently.
 
+## Tier E07 — Stateful authoring (logic in stories)
+
+The frontier that lets LLMs author stories with real state, not just static
+branching. **F-VARIABLES** (declare/read/set/list/delete + format-aware
+readers) is built and pending merge (`specs/011-variables/`). The remaining
+features all build on it; full cross-format syntax reference and design
+rationale live in `specs/011-variables/research.md` § R8, and the staged
+sequence + status live in `tracking/PROGRESS.md`. Backlog rows under epic E07.
+
+Staged so each stage ships independently and leaves smoke green:
+
+- **Stage 1 — state correct & teachable** (small, high-leverage, ship together):
+  - **F-VAR-MATH** — computed/relative updates (`<<set $cash to $cash + 100>>`,
+    `it`/`+=`/`++` per format). `set_variable` only emits literals today.
+  - **F-VAR-INIT** — declare into the format's init passage (`StoryInit` /
+    `startup`-tagged / once-only vars section / UserScript), not Start; grow the
+    variable registry into a manifest.
+  - **F-LOGIC-GUIDE** — teach the active format's logic dialect via tool
+    docstrings + the `twinery://guide` resource (the core "make any model aware
+    of the logic" requirement).
+- **Stage 2 — guided-open-world primitives:**
+  - **F-CONDITIONALS** — format-correct `if`/hook/modifier blocks + state-gated
+    links (hidden vs disabled) + header/footer event dispatcher.
+  - **F-STATBLOCK** — central stat display (`StoryCaption` / header-footer).
+- **Stage 3 — feel & depth:**
+  - **F-WIDGETS** — mutate+notify as one idempotent unit (stat-change popups).
+  - **F-INVENTORY** — array-based inventory with ownership-gated links.
+
+Acceptance exercise once Stages 1–3 land: author the **Life-Sim** demo story
+end-to-end (4 periods × 7 days, stat economy, exam gate, inventory, popups) —
+currently not tool-authorable at all.
+
 ---
 
 ## Cross-cutting non-features (still TODO at the project level)

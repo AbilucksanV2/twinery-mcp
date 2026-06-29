@@ -82,8 +82,13 @@
 - [ ] **F-CONDITIONALS** Conditional rendering + gated choices (`<<if>>`/`(if:)`/`[if]`/`<% if %>` + state-gated links) 🔒 builds on F-VARIABLES
   - *Largest single blocker for guided-open-world stories. Surfaced 2026-06-29.*
 - [ ] **F-WIDGETS** Widget + popup authoring (stat-change popups; reusable mutate-and-notify widgets) 🔒 builds on F-VAR-MATH
+- [ ] **F-VAR-INIT** Init-passage placement + variable manifest (declare into StoryInit/`startup`/vars-section/UserScript, not Start) 🔒 refines F-VARIABLES
+- [ ] **F-LOGIC-GUIDE** Teach logic via docstrings + `twinery://guide` (format-aware capability matrix; elicitation) — *directly answers "the MCP must make any model aware of the logic"*
+- [ ] **F-STATBLOCK** Central stat-display tool (`StoryCaption` / header-footer)
 - [ ] **F-INVENTORY** Inventory system (add/remove/has_item, list_inventory, inventory-gated links) 🔒 builds on F-VARIABLES
 - [ ] **F-STYLESHEETS** Rich stylesheet authoring (set/append stylesheet, per-tag style helpers)
+
+> 📄 **Logic research reference:** [`specs/research/twine-logic-authoring.md`](../specs/research/twine-logic-authoring.md) — cross-format syntax matrix, per-format gotchas, common patterns, and MCP design implications. Feeds every E07 logic feature.
 
 ---
 
@@ -101,18 +106,65 @@ a real exercise of the server, not a unit test.
 
 ## Active investigation
 
-- [~] **Logic-authoring research (2026-06-29)** — how conditionals/logic are
-  built in each format and what the MCP must teach a calling model. Parallel
-  research across SugarCube / Harlowe / Chapbook / Snowman + community patterns.
-  Output: a design plan for F-VAR-MATH / F-CONDITIONALS / F-WIDGETS and a
-  "logic guide" the MCP exposes (docstrings + `twinery://guide`). *(plan section
-  to be appended here on completion)*
+- [x] **Logic-authoring research (2026-06-29)** — completed. Parallel research
+  across SugarCube / Harlowe / Chapbook / Snowman + community/cookbook patterns.
+  Synthesized into [`specs/research/twine-logic-authoring.md`](../specs/research/twine-logic-authoring.md).
+  Key finding: logic lives in passage text; the *concept* is format-agnostic but
+  the *syntax* is not, so the MCP must **teach the dialect** — mixed-dialect
+  output is the headline failure mode. Plan below.
+
+---
+
+## Plan — making the MCP "logic-aware" (E07 frontier)
+
+The research turns the three known gaps into a sharper, ordered program. Each
+feature has a backlog row; the reference doc is the shared spec input.
+
+**Stage 0 — land the foundation**
+1. **Merge F-VARIABLES** to `main` (green and ready). Everything below builds on it.
+
+**Stage 1 — make state correct & teachable** *(do together; small, high-leverage)*
+2. **F-VAR-MATH** — `set_variable` expression mode + `adjust_variable(name, delta)`
+   emitting per-format relative assignments (`+=`/`it`/`++`/`s.x = s.x+…`). Cheapest
+   unlock; no stat economy works without it.
+3. **F-VAR-INIT** — declare into the format's **init passage** (`StoryInit` /
+   `startup`-tagged / once-only vars section / UserScript), not Start; grow the
+   `ActiveStory.variables` registry into a manifest (type, default, where shown,
+   where mutated).
+4. **F-LOGIC-GUIDE** — fold the §1 capability matrix + per-format gotchas into
+   tool docstrings and the `twinery://guide` resource so *any* calling model
+   learns the active format's dialect. **This is your core ask** — the MCP
+   teaches, it doesn't just emit. Lands alongside the tools so docstrings ship
+   with the behavior.
+
+**Stage 2 — the guided-open-world primitives**
+5. **F-CONDITIONALS** — emit format-correct `if`/hook/modifier blocks + state-gated
+   links (hidden vs disabled) + a header/footer event-dispatcher pattern. Turns
+   "a map with numbers" into the exam gate, day/location events, and time→day
+   rollover.
+6. **F-STATBLOCK** — render stats in one shared surface (`StoryCaption` / header).
+
+**Stage 3 — feel & depth**
+7. **F-WIDGETS** — mutate+notify as one idempotent unit (stat-change popup), with
+   the SugarCube `<<notify>>` third-party-dependency caveat handled.
+8. **F-INVENTORY** — closet/drink (array idiom, ownership-gated links).
+
+**Cross-cutting (fold into the above, not separate work):**
+- A `format`-bound discipline on every logic tool (never infer dialect mid-call).
+- `validate_story` lint: balanced macro tags, no `=` in a conditional, no
+  third-party macro without its dependency, temp-var-expected-to-persist.
+- Elicit the **time model** (per-action vs per-navigation tick) before generating a clock.
+
+**Re-test target:** once Stages 1–3 ship, re-attempt the **Life-Sim** demo story
+end-to-end (4 periods × 7 days, stat economy, exam gate, inventory, popups) as
+the acceptance exercise — it currently can't be tool-authored at all.
 
 ---
 
 ## Next up (recommended order)
 
-1. **Merge F-VARIABLES** to `main` (green and ready).
-2. **F-VAR-MATH** — cheapest unlock; nothing with a stat economy works without relative updates.
-3. **F-CONDITIONALS** — turns "a map with numbers" into a guided open world (exam gate, day/location events, time→day rollover).
-4. **F-WIDGETS** (popups) + **F-INVENTORY** (closet/drink) — feature layers on top.
+1. **Merge F-VARIABLES** to `main`.
+2. **F-VAR-MATH + F-VAR-INIT + F-LOGIC-GUIDE** (Stage 1 — small, ship together).
+3. **F-CONDITIONALS + F-STATBLOCK** (Stage 2 — the open-world unlock).
+4. **F-WIDGETS + F-INVENTORY** (Stage 3 — popups, closet/drink).
+5. **Re-attempt the Life-Sim demo** as the end-to-end acceptance test.

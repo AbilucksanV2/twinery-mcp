@@ -19,6 +19,7 @@ import * as declareVariable from "../server/tools/declare_variable.js";
 import * as readVariable from "../server/tools/read_variable.js";
 import * as insertVariableReader from "../server/tools/insert_variable_reader.js";
 import * as setVariable from "../server/tools/set_variable.js";
+import * as adjustVariable from "../server/tools/adjust_variable.js";
 import * as listVariables from "../server/tools/list_variables.js";
 import * as deleteVariable from "../server/tools/delete_variable.js";
 
@@ -74,6 +75,7 @@ export const TOOL_REGISTRY: ToolMetadata[] = [
   bind("read_variable", readVariable as unknown as ToolModule),
   bind("insert_variable_reader", insertVariableReader as unknown as ToolModule),
   bind("set_variable", setVariable as unknown as ToolModule),
+  bind("adjust_variable", adjustVariable as unknown as ToolModule),
   bind("list_variables", listVariables as unknown as ToolModule),
   bind("delete_variable", deleteVariable as unknown as ToolModule),
   bind("save_story", saveStory as unknown as ToolModule),

@@ -18,7 +18,7 @@ multi-format story testing, automated tests, CI, MCP elicitation) see
 
 ## What's in v0.4
 
-**21 MCP tools**:
+**22 MCP tools**:
 
 | Tool | Purpose |
 |------|---------|
@@ -38,7 +38,8 @@ multi-format story testing, automated tests, CI, MCP elicitation) see
 | `declare_variable` | Declare a story-level variable and emit a format-correct setter into the Start passage (omit `initial` to declare the name only). Rejects format-reserved names; asks before overwriting an existing declaration. |
 | `read_variable` | Read-only probe — current value, type, and setter / reader counts for a variable. Returns a recoverable `kind: error` (not a clarification) on an unknown name. |
 | `insert_variable_reader` | Insert a format-correct reader expression into a passage. Defaults to link-aware placement — immediately before the first trailing `[[...]]` block so the value renders inside the prose, not after the choices. |
-| `set_variable` | Add or replace a setter inside a passage. Idempotent within a passage — re-setting the same variable overwrites rather than stacking a second setter. |
+| `set_variable` | Add or replace a setter inside a passage. Idempotent within a passage — re-setting the same variable overwrites rather than stacking a second setter. Pass `expression: true` to emit a computed value (e.g. `$cash + $bonus`) unquoted instead of a literal. |
+| `adjust_variable` | Change a numeric variable by a relative amount in a passage (e.g. working `+100` cash) — emits the format-correct relative assignment (`<<set $cash to $cash + 100>>`, `(set: $cash to $cash + 100)`, etc.). Idempotent within a passage. |
 | `list_variables` | Read-only registry view — every variable with its type, initial value, and the passages that set or read it. |
 | `delete_variable` | Atomically strip every setter and reader for a variable from passage text, then drop it from the registry. Honors the unsaved-changes guard. |
 | `save_story` | Write `<slug>.twee` and `<slug>.html` into a folder, plus a sibling `assets/<slug>/` drop zone. Defaults `output_dir` to the active story's last-saved (or last-loaded) path; asks only when nothing is remembered. Reports any image placeholder whose file is still missing. |

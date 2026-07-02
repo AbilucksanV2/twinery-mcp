@@ -151,8 +151,21 @@ export function insertSetterIntoText(
   name: string,
   value: string | number | boolean,
 ): SetterInsertion {
-  const block = emitSetter(format, name, value);
+  return insertBlockIntoText(format, passageText, emitSetter(format, name, value));
+}
 
+/**
+ * Place a pre-built setter block into `passageText` with format-correct
+ * positioning: Chapbook goes into the vars section above the `--` separator
+ * (creating it if absent); the macro formats append to the end of the body.
+ * Shared by literal setters (emitSetter) and expression setters
+ * (emitSetterExpression).
+ */
+export function insertBlockIntoText(
+  format: StoryFormat,
+  passageText: string,
+  block: string,
+): SetterInsertion {
   if (format === "Chapbook") {
     const sep = passageText.match(/^--[ \t]*$/m);
     if (sep) {
@@ -169,6 +182,65 @@ export function insertSetterIntoText(
   const offset = passageText.length + prefix.length;
   const text = passageText + prefix + block;
   return { text, offset, block };
+}
+
+// ---------------------------------------------------------------------------
+// Expression / relative setters (F-VAR-MATH) — emit an UNQUOTED expression so
+// stats can change relatively (e.g. SugarCube <<set $cash to $cash + 100>>).
+// ---------------------------------------------------------------------------
+
+/** How the active format refers to a variable inside an expression. */
+export function variableRef(format: StoryFormat, name: string): string {
+  switch (format) {
+    case "Snowman":
+      return `s.${name}`;
+    case "Chapbook":
+      return name;
+    case "Harlowe":
+    case "SugarCube":
+      return `$${name}`;
+  }
+}
+
+/**
+ * Format-correct setter whose value is a raw expression, emitted verbatim
+ * (NOT quoted). The caller is responsible for the expression being valid in
+ * the active format's syntax; `buildAdjustExpression` produces safe ones.
+ */
+export function emitSetterExpression(
+  format: StoryFormat,
+  name: string,
+  expression: string,
+): string {
+  switch (format) {
+    case "Harlowe":
+      return `(set: $${name} to ${expression})\n`;
+    case "SugarCube":
+      return `<<set $${name} to ${expression}>>\n`;
+    case "Chapbook":
+      return `${name}: ${expression}\n`;
+    case "Snowman":
+      return `<% s.${name} = ${expression} %>\n`;
+  }
+}
+
+/** Build a relative-adjust expression like `$cash + 100` / `s.cash - 5`. */
+export function buildAdjustExpression(
+  format: StoryFormat,
+  name: string,
+  delta: number,
+): string {
+  const ref = variableRef(format, name);
+  return delta < 0 ? `${ref} - ${-delta}` : `${ref} + ${delta}`;
+}
+
+export function insertExpressionSetterIntoText(
+  format: StoryFormat,
+  passageText: string,
+  name: string,
+  expression: string,
+): SetterInsertion {
+  return insertBlockIntoText(format, passageText, emitSetterExpression(format, name, expression));
 }
 
 /** Reported type for tool responses — "null" when declared-only / reader-only. */

@@ -77,8 +77,10 @@
   - [x] Phase 6 — delete_variable + delete_passage sync (US4, T020–T023)
   - [x] Phase 7 — README/GUIDE/fixtures/version/backlog (T024–T030)
   - [ ] **Open PR → review → merge to `main`**, then flip backlog row to `done`
-- [ ] **F-VAR-MATH** Computed variable updates (`<<set $cash to $cash + 100>>`; relative/expression sets) 🔒 builds on F-VARIABLES
-  - *Smallest fix, highest impact. Surfaced 2026-06-29 — `set_variable` only emits literals today.*
+- [~] **F-VAR-MATH** Computed variable updates — **built on `012-variable-logic`, pending PR**
+  - [x] `adjust_variable(passage, name, delta)` — format-correct relative setter, idempotent per passage
+  - [x] `set_variable` `expression: true` mode — emit a computed value unquoted
+  - [x] smoke 23d-math (all 4 transports/fixtures green); registry 22 tools; README + GUIDE updated
 - [ ] **F-CONDITIONALS** Conditional rendering + gated choices (`<<if>>`/`(if:)`/`[if]`/`<% if %>` + state-gated links) 🔒 builds on F-VARIABLES
   - *Largest single blocker for guided-open-world stories. Surfaced 2026-06-29.*
 - [ ] **F-WIDGETS** Widget + popup authoring (stat-change popups; reusable mutate-and-notify widgets) 🔒 builds on F-VAR-MATH

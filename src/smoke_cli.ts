@@ -147,7 +147,7 @@ async function main(): Promise<void> {
     if (!s11.stderr().includes(expectedBanner)) fail(`missing exact banner; stderr was:\n${s11.stderr()}`);
     ok(`banner verbatim: ${expectedBanner}`);
     const names = await callListToolsOnce(s11.port);
-    if (names.length !== 21) fail(`expected 21 tools via HTTP, got ${names.length}`);
+    if (names.length !== 22) fail(`expected 22 tools via HTTP, got ${names.length}`);
     ok(`HTTP client got ${names.length} tools at port ${s11.port}`);
   } finally {
     await s11.kill();
@@ -159,10 +159,10 @@ async function main(): Promise<void> {
   const seqServer = await spawnServerAndAwaitListen(["--transport", "http", "--port", String(seqPort)], { expectPort: seqPort });
   try {
     const namesA = await callListToolsOnce(seqServer.port);
-    if (namesA.length !== 21) fail(`first client: expected 21 tools, got ${namesA.length}`);
+    if (namesA.length !== 22) fail(`first client: expected 22 tools, got ${namesA.length}`);
     ok(`first client got ${namesA.length} tools`);
     const namesB = await callListToolsOnce(seqServer.port);
-    if (namesB.length !== 21) fail(`second client (reconnect): expected 21 tools, got ${namesB.length}`);
+    if (namesB.length !== 22) fail(`second client (reconnect): expected 22 tools, got ${namesB.length}`);
     ok(`second client (simulating Claude Desktop reconnect / mcp-remote restart) got ${namesB.length} tools`);
   } finally {
     await seqServer.kill();
@@ -185,7 +185,7 @@ async function main(): Promise<void> {
     ok(`resolved-port banner present`);
     ok(`warning verbatim: ${expectedWarn}`);
     const names = await callListToolsOnce(s12.port); // loopback connection still works
-    if (names.length !== 21) fail(`expected 21 tools via loopback after 0.0.0.0 bind, got ${names.length}`);
+    if (names.length !== 22) fail(`expected 22 tools via loopback after 0.0.0.0 bind, got ${names.length}`);
     ok(`loopback HTTP client got ${names.length} tools`);
   } finally {
     await s12.kill();

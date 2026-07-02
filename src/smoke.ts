@@ -154,9 +154,9 @@ async function createAdapter(): Promise<SmokeAdapter> {
 async function runSmoke(adapter: SmokeAdapter): Promise<void> {
   console.log(`Twinery MCP POC smoke test (transport=${adapter.mode})\n==========================`);
 
-  // Pre-flight for HTTP: verify the listTools wire format returns all 21 tools.
+  // Pre-flight for HTTP: verify the listTools wire format returns all 22 tools.
   if (adapter.mode === "http" && adapter.listToolNames !== undefined) {
-    section("0. tools/list over HTTP returns all 21 tools");
+    section("0. tools/list over HTTP returns all 22 tools");
     const names = await adapter.listToolNames();
     const expected = TOOL_REGISTRY.map((t) => t.name).sort();
     const got = [...names].sort();
@@ -541,6 +541,36 @@ async function runSmoke(adapter: SmokeAdapter): Promise<void> {
   if (setterCount !== 1) fail(`expected exactly 1 setter for playerName in Greeting, got ${setterCount}`);
   if (!gp.passage.text.includes('(set: $playerName to "Anya")')) fail("expected the second value Anya to win");
   ok(`set_variable created then replaced; Greeting holds exactly one setter with the latest value`);
+
+  section("23d-math. variables F-VAR-MATH — adjust_variable + set_variable expression mode (Harlowe)");
+  await adapter.callTool("declare_variable", { name: "cash", initial: 0 });
+  await adapter.callTool("declare_variable", { name: "energy", initial: 50 });
+  await adapter.callTool("create_passage", { name: "Work", text: "You clock in.\n[[Home->Greeting]]", tags: [] });
+  await adapter.callTool("create_passage", { name: "Bonus", text: "A windfall.\n[[Home->Greeting]]", tags: [] });
+
+  const adj1 = await adapter.callTool("adjust_variable", { passage_name: "Work", name: "cash", delta: 100 }) as { kind: string; action: string; emitted_block: string };
+  if (adj1.kind !== "ok" || adj1.action !== "created") fail(`adjust_variable first call should be created: ${JSON.stringify(adj1)}`);
+  if (!adj1.emitted_block.includes("(set: $cash to $cash + 100)")) fail(`adjust emitted wrong Harlowe block: ${JSON.stringify(adj1.emitted_block)}`);
+
+  const adj2 = await adapter.callTool("adjust_variable", { passage_name: "Work", name: "cash", delta: 100 }) as { kind: string; action: string };
+  if (adj2.kind !== "ok" || adj2.action !== "replaced") fail(`adjust_variable re-call should be idempotent (replaced): ${JSON.stringify(adj2)}`);
+
+  const adjNeg = await adapter.callTool("adjust_variable", { passage_name: "Work", name: "energy", delta: -10 }) as { kind: string; emitted_block: string };
+  if (adjNeg.kind !== "ok" || !adjNeg.emitted_block.includes("(set: $energy to $energy - 10)")) fail(`negative adjust wrong: ${JSON.stringify(adjNeg)}`);
+
+  const expr = await adapter.callTool("set_variable", { passage_name: "Bonus", name: "cash", value: "$cash * 2", expression: true }) as { kind: string; emitted_block: string };
+  if (expr.kind !== "ok" || !expr.emitted_block.includes("(set: $cash to $cash * 2)")) fail(`expression set wrong: ${JSON.stringify(expr)}`);
+  if (expr.emitted_block.includes('"$cash * 2"')) fail("expression mode must NOT quote the value");
+
+  const adjStr = await adapter.callTool("adjust_variable", { passage_name: "Work", name: "playerName", delta: 1 }) as { kind: string };
+  if (adjStr.kind !== "error") fail("adjust_variable on a string variable should return kind:error");
+
+  const gpWork = await adapter.callTool("get_passage", { name: "Work" }) as { passage: { text: string } };
+  const cashAdjustCount = gpWork.passage.text.split("(set: $cash to $cash + 100)").length - 1;
+  if (cashAdjustCount !== 1) fail(`expected exactly 1 cash-adjust in Work (idempotent), got ${cashAdjustCount}`);
+  if (!gpWork.passage.text.includes("(set: $energy to $energy - 10)")) fail("energy adjust missing from Work");
+  ok(`adjust_variable emits relative Harlowe setters (idempotent per passage); expression mode is unquoted; string-var adjust rejected`);
+
   await rm(tmpV, { recursive: true, force: true });
 
   section("23e. variables US3 — list_variables + extract-on-load round-trip (Harlowe)");

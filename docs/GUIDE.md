@@ -25,6 +25,7 @@ The tool surface is deliberately small and verb-shaped (think UnityMCP / GodotMC
 - **`read_variable`** — Read-only probe — return the current declared / set value of a named variable plus how many setters and readers reference it.
 - **`insert_variable_reader`** — Insert a format-correct reader expression for a declared variable into a passage.
 - **`set_variable`** — Add or replace a setter for a declared variable inside a named passage.
+- **`adjust_variable`** — Change a numeric variable by a relative amount inside a passage — e.g.
 - **`list_variables`** — Return every declared variable in the active story with its type, initial value, and the passages that set or read it.
 - **`delete_variable`** — Atomically remove every setter and every reader for a named variable from the active story's passage text, then drop it from the registry.
 - **`save_story`** — Persist the active story as <slug>.twee and <slug>.html into a directory, plus a sibling assets/<slug>/ drop zone.
@@ -484,7 +485,7 @@ Emits e.g. $playerName (Harlowe) before any trailing links in Greeting.
 
 ### `set_variable`
 
-Add or replace a setter for a declared variable inside a named passage. Idempotent within a passage — calling it twice for the same variable in the same passage overwrites the existing setter rather than stacking a second one.
+Add or replace a setter for a declared variable inside a named passage. Idempotent within a passage — calling it twice for the same variable in the same passage overwrites the existing setter rather than stacking a second one. Pass expression:true to emit the value verbatim as a format-native expression (e.g. "$cash + 100") instead of a quoted literal — use it for computed values, or prefer adjust_variable for simple +/- changes.
 
 **Input**
 
@@ -493,6 +494,7 @@ Add or replace a setter for a declared variable inside a named passage. Idempote
 | `passage_name` | string | yes | — |
 | `name` | string | yes | — |
 | `value` | union | yes | — |
+| `expression` | boolean | no | — |
 
 **Surfaces a clarification when:**
 
@@ -510,6 +512,39 @@ Add or replace a setter for a declared variable inside a named passage. Idempote
   "value": "Mira"
 }
 ```
+
+For a computed value pass expression:true, e.g. { passage_name: "Work", name: "cash", value: "$cash + 100", expression: true }.
+
+### `adjust_variable`
+
+Change a numeric variable by a relative amount inside a passage — e.g. working adds +100 cash, studying adds +1 intelligence. Emits the format-correct relative assignment (SugarCube <<set $cash to $cash + 100>>, Harlowe (set: $cash to $cash + 100), Chapbook cash: cash + 100, Snowman <% s.cash = s.cash + 100 %>). Idempotent within a passage — re-adjusting the same variable in the same passage replaces the prior adjustment rather than stacking. Use set_variable for absolute values.
+
+**Input**
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `passage_name` | string | yes | — |
+| `name` | string | yes | — |
+| `delta` | number | yes | Amount to add (negative to subtract). |
+
+**Surfaces a clarification when:**
+
+- variable not declared: ask declare_now | cancel (inherited from set_variable).
+- passage_name does not exist: ask which passage was meant (inherited from set_variable).
+
+**Example**
+
+*Working pays 100 cash*
+
+```json
+{
+  "passage_name": "Work",
+  "name": "cash",
+  "delta": 100
+}
+```
+
+Use a negative delta to subtract, e.g. { passage_name: "Bar", name: "cash", delta: -20 }.
 
 ### `list_variables`
 

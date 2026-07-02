@@ -28,8 +28,9 @@
 | Session persistence + dirty guard | ✅ shipped |
 | HTTP transport mode + CI + all-format fixtures | ✅ shipped |
 | **Variables (declare/read/set/list/delete + readers)** | ✅ built, ⏳ pending PR merge |
-| **Logic: conditionals, computed stats, widgets/popups** | ❌ not built — **active research + planning** |
-| Inventory · stylesheets | ❌ backlog |
+| **Computed stats + conditionals + logic guide** | ✅ built on `012-variable-logic`, ⏳ pending PR |
+| Stat HUD · widgets/popups · inventory · init-passage placement | ❌ backlog (F-STATBLOCK, F-WIDGETS, F-INVENTORY, F-VAR-INIT) |
+| Stylesheets | ❌ backlog |
 
 ---
 
@@ -107,7 +108,7 @@ a real exercise of the server, not a unit test.
 - [x] **Locked Cellar** (×4 formats) — round-trip fixtures; static branching + one boolean var · `fixtures/`
 - [ ] **Cartographer's Apprentice** — 17-passage static-branching story (authored 2026-05-14); surfaced F-SLUG, F-AUTOLAYOUT, and the whole E07 epic (no way to add state)
 - [ ] **Life-Sim** (SugarCube) — 4 time periods × 7 days, stats (energy/cash/beauty/intelligence/charm), locations + activities that mutate stats, 5+ day/location-triggered events (exam gate), inventory/closet, stat-change popups
-  - 🔒 **Blocked** — needs F-VAR-MATH + F-CONDITIONALS (+ F-WIDGETS for popups, F-INVENTORY for closet). Feasibility probed 2026-06-29: world/navigation/static stats build today; all dynamics do not. See backlog notes.
+  - 🟡 **Mostly unblocked** (2026-07-02): stat economy (adjust_variable), the exam gate + day/location events + time→day rollover (insert_conditional / insert_conditional_link), and format-correct authoring (logic guide) all build now. Remaining for a full build: **F-STATBLOCK** (persistent stat HUD), **F-WIDGETS** (stat-change popups), **F-INVENTORY** (closet/drink). Then this becomes the end-to-end acceptance test.
 
 ---
 

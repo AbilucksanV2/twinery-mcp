@@ -26,6 +26,8 @@ The tool surface is deliberately small and verb-shaped (think UnityMCP / GodotMC
 - **`insert_variable_reader`** — Insert a format-correct reader expression for a declared variable into a passage.
 - **`set_variable`** — Add or replace a setter for a declared variable inside a named passage.
 - **`adjust_variable`** — Change a numeric variable by a relative amount inside a passage — e.g.
+- **`insert_conditional`** — Insert a format-correct conditional block into a passage — content that renders only when a variable test passes (with an optional else branch).
+- **`insert_conditional_link`** — Insert a link that only appears when a variable test passes — the state-gated choice pattern (e.g.
 - **`list_variables`** — Return every declared variable in the active story with its type, initial value, and the passages that set or read it.
 - **`delete_variable`** — Atomically remove every setter and every reader for a named variable from the active story's passage text, then drop it from the registry.
 - **`save_story`** — Persist the active story as <slug>.twee and <slug>.html into a directory, plus a sibling assets/<slug>/ drop zone.
@@ -577,6 +579,92 @@ Change a numeric variable by a relative amount inside a passage — e.g. working
 ```
 
 Use a negative delta to subtract, e.g. { passage_name: "Bar", name: "cash", delta: -20 }.
+
+### `insert_conditional`
+
+Insert a format-correct conditional block into a passage — content that renders only when a variable test passes (with an optional else branch). Conditions are structured ({name, op, value}) and rendered into the active format's dialect (SugarCube <<if>>, Harlowe (if:)[…], Chapbook [if]…[continue], Snowman <% if(){} %>), so you never hand-write macro syntax. Use it for state-gated text, day/location event triggers, or wrapping a setter for a clock rollover.
+
+**Input**
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `passage_name` | string | yes | — |
+| `conditions` | array<object> | yes | — |
+| `join` | enum(`and` \| `or`) | no | — |
+| `then_text` | string | yes | Content rendered when the condition holds (may contain links / setters). |
+| `else_text` | string | no | — |
+| `offset` | number | no | — |
+
+**Surfaces a clarification when:**
+
+- passage_name does not exist: ask which passage was meant (valid answers = existing passage names).
+- a referenced variable is not declared: returns a recoverable error naming it (declare_variable then retry).
+
+**Example**
+
+*Show an exam event only on day 2 at the school*
+
+```json
+{
+  "passage_name": "School",
+  "conditions": [
+    {
+      "name": "day",
+      "op": "eq",
+      "value": 2
+    }
+  ],
+  "then_text": "A proctor waves you toward the exam hall.\n[[Take the exam->Exam]]"
+}
+```
+
+Multiple conditions join with `join` (default "and"): [{name:"intelligence",op:"gt",value:1},{name:"attendedSchool",op:"truthy"}].
+
+### `insert_conditional_link`
+
+Insert a link that only appears when a variable test passes — the state-gated choice pattern (e.g. show the "Take the exam" option only when intelligence > 1 and the player attended school). Emits a format-correct conditional wrapping a [[...]] link, so the graph still sees the edge. Provide else_text to show a disabled/explanatory line when the condition fails.
+
+**Input**
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `passage_name` | string | yes | — |
+| `conditions` | array<object> | yes | — |
+| `join` | enum(`and` \| `or`) | no | — |
+| `to_passage` | string | yes | — |
+| `display_text` | string | no | — |
+| `else_text` | string | no | — |
+| `offset` | number | no | — |
+
+**Surfaces a clarification when:**
+
+- passage_name does not exist: ask which passage was meant.
+- to_passage does not exist: ask create_empty | cancel (parity with link_passages).
+- a referenced variable is not declared: returns a recoverable error naming it.
+
+**Example**
+
+*Only offer the exam pass when the player is ready*
+
+```json
+{
+  "passage_name": "Exam",
+  "conditions": [
+    {
+      "name": "intelligence",
+      "op": "gt",
+      "value": 1
+    },
+    {
+      "name": "attendedSchool",
+      "op": "truthy"
+    }
+  ],
+  "to_passage": "ExamPass",
+  "display_text": "Answer confidently",
+  "else_text": "You are not prepared enough to pass."
+}
+```
 
 ### `list_variables`
 

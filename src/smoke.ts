@@ -154,9 +154,9 @@ async function createAdapter(): Promise<SmokeAdapter> {
 async function runSmoke(adapter: SmokeAdapter): Promise<void> {
   console.log(`Twinery MCP POC smoke test (transport=${adapter.mode})\n==========================`);
 
-  // Pre-flight for HTTP: verify the listTools wire format returns all 22 tools.
+  // Pre-flight for HTTP: verify the listTools wire format returns all 24 tools.
   if (adapter.mode === "http" && adapter.listToolNames !== undefined) {
-    section("0. tools/list over HTTP returns all 22 tools");
+    section("0. tools/list over HTTP returns all 24 tools");
     const names = await adapter.listToolNames();
     const expected = TOOL_REGISTRY.map((t) => t.name).sort();
     const got = [...names].sort();
@@ -657,6 +657,54 @@ async function runSmoke(adapter: SmokeAdapter): Promise<void> {
   if (dirtyDelResolved.kind !== "ok") fail("discard_unsaved did not complete the delete");
   ok(`delete_variable honored the dirty guard; discard_unsaved resolved the deletion`);
   await rm(tmpV3, { recursive: true, force: true });
+
+  section("23g. variables F-CONDITIONALS — cross-format if-block + gated link (all 4 formats)");
+  const condExpect: Record<string, { ifOpen: string; gate: string; link: string }> = {
+    Harlowe: { ifOpen: "(if: $day is 2)[", gate: "(if: $intelligence > 1 and $attendedSchool)[", link: "[[Answer->ExamPass]]" },
+    SugarCube: { ifOpen: "<<if $day is 2>>", gate: "<<if $intelligence gt 1 and $attendedSchool>>", link: "[[Answer|ExamPass]]" },
+    Chapbook: { ifOpen: "[if day === 2]", gate: "[if intelligence > 1 && attendedSchool]", link: "[[Answer->ExamPass]]" },
+    Snowman: { ifOpen: "<% if (s.day === 2) { %>", gate: "<% if (s.intelligence > 1 && s.attendedSchool) { %>", link: "[[Answer|ExamPass]]" },
+  };
+  for (const fmt of ["Harlowe", "SugarCube", "Chapbook", "Snowman"] as const) {
+    await adapter.callTool("create_story", { name: `Cond ${fmt}`, format: fmt, discard_unsaved: true });
+    await adapter.callTool("create_passage", { name: "Start", text: "Begin.", set_as_start: true, tags: [] });
+    await adapter.callTool("create_passage", { name: "School", text: "The school gate.\n[[Leave->Start]]", tags: [] });
+    await adapter.callTool("create_passage", { name: "Exam", text: "The exam hall.\n[[Leave->Start]]", tags: [] });
+    await adapter.callTool("create_passage", { name: "ExamPass", text: "You passed.", tags: [] });
+    await adapter.callTool("declare_variable", { name: "day", initial: 1 });
+    await adapter.callTool("declare_variable", { name: "intelligence", initial: 1 });
+    await adapter.callTool("declare_variable", { name: "attendedSchool", initial: false });
+
+    // undeclared-variable guard
+    const bad = await adapter.callTool("insert_conditional", { passage_name: "School", conditions: [{ name: "ghost", op: "truthy" }], then_text: "boo" }) as { kind: string };
+    if (bad.kind !== "error") fail(`${fmt}: insert_conditional on undeclared var should error`);
+
+    const cond = await adapter.callTool("insert_conditional", {
+      passage_name: "School",
+      conditions: [{ name: "day", op: "eq", value: 2 }],
+      then_text: "A proctor waves you toward the exam hall.",
+    }) as { kind: string; emitted_block: string };
+    if (cond.kind !== "ok" || !cond.emitted_block.includes(condExpect[fmt].ifOpen)) {
+      fail(`${fmt}: if-block wrong: ${JSON.stringify(cond)}`);
+    }
+
+    const gated = await adapter.callTool("insert_conditional_link", {
+      passage_name: "Exam",
+      conditions: [{ name: "intelligence", op: "gt", value: 1 }, { name: "attendedSchool", op: "truthy" }],
+      to_passage: "ExamPass",
+      display_text: "Answer",
+      else_text: "You are not ready.",
+    }) as { kind: string; emitted_block: string; rendered_link: string };
+    if (gated.kind !== "ok" || !gated.emitted_block.includes(condExpect[fmt].gate)) {
+      fail(`${fmt}: gated-link condition wrong: ${JSON.stringify(gated)}`);
+    }
+    if (!gated.emitted_block.includes(condExpect[fmt].link)) fail(`${fmt}: gated link markup wrong: ${JSON.stringify(gated)}`);
+
+    // The gated link is still a real graph edge Exam -> ExamPass.
+    const examP = await adapter.callTool("get_passage", { name: "Exam" }) as { passage: { outgoing_links: Array<{ to_passage: string }> } };
+    if (!examP.passage.outgoing_links.some((l) => l.to_passage === "ExamPass")) fail(`${fmt}: gated link not seen as a graph edge`);
+  }
+  ok(`insert_conditional + insert_conditional_link emit correct if/gated-link markup for all four formats; gated links stay graph edges; undeclared-var guard fires`);
 
   section("24. current_story_info before any story shows active=false");
   const info3 = await adapter.callTool("current_story_info", {}) as { active: boolean };

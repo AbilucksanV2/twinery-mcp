@@ -81,8 +81,10 @@
   - [x] `adjust_variable(passage, name, delta)` — format-correct relative setter, idempotent per passage
   - [x] `set_variable` `expression: true` mode — emit a computed value unquoted
   - [x] smoke 23d-math (all 4 transports/fixtures green); registry 22 tools; README + GUIDE updated
-- [ ] **F-CONDITIONALS** Conditional rendering + gated choices (`<<if>>`/`(if:)`/`[if]`/`<% if %>` + state-gated links) 🔒 builds on F-VARIABLES
-  - *Largest single blocker for guided-open-world stories. Surfaced 2026-06-29.*
+- [~] **F-CONDITIONALS** Conditional rendering + gated choices — **built on `012-variable-logic`, pending PR**
+  - [x] `insert_conditional` — structured `{name,op,value}` conditions (and/or) → format-correct `<<if>>`/`(if:)[…]`/`[if]…[continue]`/`<% if(){} %>` block with optional else
+  - [x] `insert_conditional_link` — state-gated link (wraps `[[...]]`; stays a real graph edge; optional else line)
+  - [x] cross-format smoke 23g (all 4 dialects) green; undeclared-var guard; registry 24 tools
 - [ ] **F-WIDGETS** Widget + popup authoring (stat-change popups; reusable mutate-and-notify widgets) 🔒 builds on F-VAR-MATH
 - [ ] **F-VAR-INIT** Init-passage placement + variable manifest (declare into StoryInit/`startup`/vars-section/UserScript, not Start) 🔒 refines F-VARIABLES
 - [~] **F-LOGIC-GUIDE** Teach logic via docstrings + `twinery://guide` — **built on `012-variable-logic`, pending PR**

@@ -243,6 +243,94 @@ export function insertExpressionSetterIntoText(
   return insertBlockIntoText(format, passageText, emitSetterExpression(format, name, expression));
 }
 
+// ---------------------------------------------------------------------------
+// Conditions & conditional blocks (F-CONDITIONALS) — structured, format-agnostic
+// condition model rendered into each format's dialect.
+// ---------------------------------------------------------------------------
+
+export type ConditionOp = "eq" | "ne" | "gt" | "gte" | "lt" | "lte" | "truthy" | "falsy";
+
+export interface Condition {
+  name: string;
+  op: ConditionOp;
+  value?: string | number | boolean;
+}
+
+export type ConditionJoin = "and" | "or";
+
+function isJsFormat(format: StoryFormat): boolean {
+  return format === "Chapbook" || format === "Snowman";
+}
+
+/** Render a comparison value: numbers/booleans bare, strings double-quoted. */
+function renderConditionValue(value: string | number | boolean): string {
+  if (typeof value === "number") return String(value);
+  if (typeof value === "boolean") return value ? "true" : "false";
+  return `"${value.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
+}
+
+function comparisonOperator(format: StoryFormat, op: ConditionOp): string {
+  if (isJsFormat(format)) {
+    return { eq: "===", ne: "!==", gt: ">", gte: ">=", lt: "<", lte: "<=" }[op as "eq"]!;
+  }
+  if (format === "Harlowe") {
+    return { eq: "is", ne: "is not", gt: ">", gte: ">=", lt: "<", lte: "<=" }[op as "eq"]!;
+  }
+  // SugarCube — named operators
+  return { eq: "is", ne: "isnot", gt: "gt", gte: "gte", lt: "lt", lte: "lte" }[op as "eq"]!;
+}
+
+function renderOneCondition(format: StoryFormat, c: Condition): string {
+  const ref = variableRef(format, c.name);
+  if (c.op === "truthy") return ref;
+  if (c.op === "falsy") return isJsFormat(format) ? `!${ref}` : `not ${ref}`;
+  return `${ref} ${comparisonOperator(format, c.op)} ${renderConditionValue(c.value!)}`;
+}
+
+/** Render one or more conditions joined by `and` / `or` in the format's dialect. */
+export function renderCondition(
+  format: StoryFormat,
+  conditions: Condition[],
+  join: ConditionJoin = "and",
+): string {
+  const joiner = isJsFormat(format)
+    ? join === "or" ? " || " : " && "
+    : join === "or" ? " or " : " and ";
+  return conditions.map((c) => renderOneCondition(format, c)).join(joiner);
+}
+
+/**
+ * Emit a format-correct conditional block. `thenText` renders when the
+ * condition holds; the optional `elseText` renders otherwise. Returns the block
+ * with a trailing newline so it splices cleanly into passage text.
+ */
+export function emitConditionalBlock(
+  format: StoryFormat,
+  condition: string,
+  thenText: string,
+  elseText?: string,
+): string {
+  const hasElse = elseText !== undefined && elseText !== "";
+  switch (format) {
+    case "SugarCube":
+      return hasElse
+        ? `<<if ${condition}>>\n${thenText}\n<<else>>\n${elseText}\n<</if>>\n`
+        : `<<if ${condition}>>\n${thenText}\n<</if>>\n`;
+    case "Harlowe":
+      return hasElse
+        ? `(if: ${condition})[\n${thenText}\n](else:)[\n${elseText}\n]\n`
+        : `(if: ${condition})[\n${thenText}\n]\n`;
+    case "Chapbook":
+      return hasElse
+        ? `[if ${condition}]\n${thenText}\n[else]\n${elseText}\n[continue]\n`
+        : `[if ${condition}]\n${thenText}\n[continue]\n`;
+    case "Snowman":
+      return hasElse
+        ? `<% if (${condition}) { %>\n${thenText}\n<% } else { %>\n${elseText}\n<% } %>\n`
+        : `<% if (${condition}) { %>\n${thenText}\n<% } %>\n`;
+  }
+}
+
 /** Reported type for tool responses — "null" when declared-only / reader-only. */
 export function reportedType(v: Variable): "string" | "number" | "boolean" | "null" {
   if (v.initialValue === null && v.setters.length === 0) return "null";

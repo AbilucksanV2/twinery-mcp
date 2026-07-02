@@ -154,9 +154,9 @@ async function createAdapter(): Promise<SmokeAdapter> {
 async function runSmoke(adapter: SmokeAdapter): Promise<void> {
   console.log(`Twinery MCP POC smoke test (transport=${adapter.mode})\n==========================`);
 
-  // Pre-flight for HTTP: verify the listTools wire format returns all 24 tools.
+  // Pre-flight for HTTP: verify the listTools wire format returns all 25 tools.
   if (adapter.mode === "http" && adapter.listToolNames !== undefined) {
-    section("0. tools/list over HTTP returns all 24 tools");
+    section("0. tools/list over HTTP returns all 25 tools");
     const names = await adapter.listToolNames();
     const expected = TOOL_REGISTRY.map((t) => t.name).sort();
     const got = [...names].sort();
@@ -705,6 +705,41 @@ async function runSmoke(adapter: SmokeAdapter): Promise<void> {
     if (!examP.passage.outgoing_links.some((l) => l.to_passage === "ExamPass")) fail(`${fmt}: gated link not seen as a graph edge`);
   }
   ok(`insert_conditional + insert_conditional_link emit correct if/gated-link markup for all four formats; gated links stay graph edges; undeclared-var guard fires`);
+
+  section("23h. variables F-STATBLOCK — central stat HUD (SugarCube StoryCaption + Harlowe header; Chapbook declines)");
+  // SugarCube — StoryCaption sidebar
+  await adapter.callTool("create_story", { name: "HUD SC", format: "SugarCube", discard_unsaved: true });
+  await adapter.callTool("create_passage", { name: "Start", text: "Begin.", set_as_start: true, tags: [] });
+  await adapter.callTool("declare_variable", { name: "day", initial: 1 });
+  await adapter.callTool("declare_variable", { name: "cash", initial: 0 });
+  const scBlock = await adapter.callTool("set_stat_block", { variables: ["day", "cash"], title: "Status" }) as { kind: string; passage: string; emitted_text: string };
+  if (scBlock.kind !== "ok" || scBlock.passage !== "StoryCaption") fail(`SugarCube stat block should target StoryCaption: ${JSON.stringify(scBlock)}`);
+  if (!scBlock.emitted_text.includes("cash: <<= $cash>>")) fail(`StoryCaption missing reader: ${JSON.stringify(scBlock.emitted_text)}`);
+  // idempotent replace — re-call with a different set regenerates, not appends
+  const scBlock2 = await adapter.callTool("set_stat_block", { variables: ["day"] }) as { kind: string };
+  const capP = await adapter.callTool("get_passage", { name: "StoryCaption" }) as { passage: { text: string } };
+  if ((capP.passage.text.match(/<<= \$/g) ?? []).length !== 1) fail(`StoryCaption should hold exactly 1 reader after regen, got: ${capP.passage.text}`);
+  void scBlock2;
+  const scUndeclared = await adapter.callTool("set_stat_block", { variables: ["ghost"] }) as { kind: string };
+  if (scUndeclared.kind !== "error") fail("set_stat_block on undeclared var should error");
+
+  // Harlowe — header-tagged passage
+  await adapter.callTool("create_story", { name: "HUD H", format: "Harlowe", discard_unsaved: true });
+  await adapter.callTool("create_passage", { name: "Start", text: "Begin.", set_as_start: true, tags: [] });
+  await adapter.callTool("declare_variable", { name: "hp", initial: 10 });
+  const hBlock = await adapter.callTool("set_stat_block", { variables: ["hp"] }) as { kind: string; passage: string };
+  if (hBlock.kind !== "ok" || hBlock.passage !== "StatBar") fail(`Harlowe stat block should target StatBar: ${JSON.stringify(hBlock)}`);
+  const barP = await adapter.callTool("get_passage", { name: "StatBar" }) as { passage: { tags: string[]; text: string } };
+  if (!barP.passage.tags.includes("header")) fail("Harlowe StatBar must be tagged header");
+  if (!barP.passage.text.includes("hp: $hp")) fail("Harlowe StatBar missing reader");
+
+  // Chapbook — no native header; declines
+  await adapter.callTool("create_story", { name: "HUD C", format: "Chapbook", discard_unsaved: true });
+  await adapter.callTool("create_passage", { name: "Start", text: "Begin.", set_as_start: true, tags: [] });
+  await adapter.callTool("declare_variable", { name: "coins", initial: 0 });
+  const cBlock = await adapter.callTool("set_stat_block", { variables: ["coins"] }) as { kind: string; message?: string };
+  if (cBlock.kind !== "error") fail("Chapbook set_stat_block should decline (no native header)");
+  ok(`set_stat_block: SugarCube StoryCaption (idempotent) + Harlowe header-tagged StatBar; undeclared-var + Chapbook-unsupported both error`);
 
   section("24. current_story_info before any story shows active=false");
   const info3 = await adapter.callTool("current_story_info", {}) as { active: boolean };

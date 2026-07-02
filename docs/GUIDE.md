@@ -28,6 +28,7 @@ The tool surface is deliberately small and verb-shaped (think UnityMCP / GodotMC
 - **`adjust_variable`** — Change a numeric variable by a relative amount inside a passage — e.g.
 - **`insert_conditional`** — Insert a format-correct conditional block into a passage — content that renders only when a variable test passes (with an optional else branch).
 - **`insert_conditional_link`** — Insert a link that only appears when a variable test passes — the state-gated choice pattern (e.g.
+- **`set_stat_block`** — Create or replace a persistent stat display shown on every passage — the HUD/sidebar.
 - **`list_variables`** — Return every declared variable in the active story with its type, initial value, and the passages that set or read it.
 - **`delete_variable`** — Atomically remove every setter and every reader for a named variable from the active story's passage text, then drop it from the registry.
 - **`save_story`** — Persist the active story as <slug>.twee and <slug>.html into a directory, plus a sibling assets/<slug>/ drop zone.
@@ -665,6 +666,40 @@ Insert a link that only appears when a variable test passes — the state-gated 
   "else_text": "You are not prepared enough to pass."
 }
 ```
+
+### `set_stat_block`
+
+Create or replace a persistent stat display shown on every passage — the HUD/sidebar. SugarCube uses the StoryCaption special passage (sidebar); Harlowe uses a header-tagged passage. Declarative and idempotent: pass the full list of variables to show and the block is regenerated. Chapbook and Snowman have no native per-passage header, so the tool declines them (author a stat panel manually).
+
+**Input**
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `variables` | array<string> | yes | Variable names to display, in order. |
+| `title` | string | no | — |
+| `separator` | string | no | — |
+
+**Surfaces a clarification when:**
+
+- a listed variable is not declared: returns a recoverable error naming it.
+
+**Example**
+
+*Show the life-sim HUD*
+
+```json
+{
+  "variables": [
+    "day",
+    "cash",
+    "energy",
+    "intelligence"
+  ],
+  "title": "Status"
+}
+```
+
+SugarCube writes StoryCaption; Harlowe writes a header-tagged StatBar passage.
 
 ### `list_variables`
 

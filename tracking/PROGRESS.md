@@ -92,7 +92,8 @@
   - [x] "Authoring logic" section in the generated guide: format-aware capability matrix + per-format gotchas + variable-tool pointers
   - [x] variable-tool docstrings state format-correctness / expression mode
   - [ ] format-aware *elicitation* deferred to F-ELICIT (structured guide covers it for now)
-- [ ] **F-STATBLOCK** Central stat-display tool (`StoryCaption` / header-footer)
+- [~] **F-STATBLOCK** Central stat-display tool — **built on `012-variable-logic`, pending PR**
+  - [x] `set_stat_block(variables[], title?, separator?)` — SugarCube `StoryCaption` sidebar + Harlowe `header`-tagged `StatBar`; declarative/idempotent; declines Chapbook/Snowman (no native header); smoke 23h; registry 25 tools
 - [ ] **F-INVENTORY** Inventory system (add/remove/has_item, list_inventory, inventory-gated links) 🔒 builds on F-VARIABLES
 - [ ] **F-STYLESHEETS** Rich stylesheet authoring (set/append stylesheet, per-tag style helpers)
 

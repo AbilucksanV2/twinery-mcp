@@ -154,9 +154,9 @@ async function createAdapter(): Promise<SmokeAdapter> {
 async function runSmoke(adapter: SmokeAdapter): Promise<void> {
   console.log(`Twinery MCP POC smoke test (transport=${adapter.mode})\n==========================`);
 
-  // Pre-flight for HTTP: verify the listTools wire format returns all 25 tools.
+  // Pre-flight for HTTP: verify the listTools wire format returns all 26 tools.
   if (adapter.mode === "http" && adapter.listToolNames !== undefined) {
-    section("0. tools/list over HTTP returns all 25 tools");
+    section("0. tools/list over HTTP returns all 26 tools");
     const names = await adapter.listToolNames();
     const expected = TOOL_REGISTRY.map((t) => t.name).sort();
     const got = [...names].sort();
@@ -740,6 +740,30 @@ async function runSmoke(adapter: SmokeAdapter): Promise<void> {
   const cBlock = await adapter.callTool("set_stat_block", { variables: ["coins"] }) as { kind: string; message?: string };
   if (cBlock.kind !== "error") fail("Chapbook set_stat_block should decline (no native header)");
   ok(`set_stat_block: SugarCube StoryCaption (idempotent) + Harlowe header-tagged StatBar; undeclared-var + Chapbook-unsupported both error`);
+
+  section("23i. variables F-WIDGETS — reusable widget + stat_popup preset (SugarCube; others decline)");
+  await adapter.callTool("create_story", { name: "Widget SC", format: "SugarCube", discard_unsaved: true });
+  await adapter.callTool("create_passage", { name: "Start", text: "Begin.", set_as_start: true, tags: [] });
+  const preset = await adapter.callTool("add_widget", { preset: "stat_popup" }) as { kind: string; widget: string; passage: string; action: string };
+  if (preset.kind !== "ok" || preset.widget !== "statpop" || preset.passage !== "Widgets") fail(`stat_popup preset wrong: ${JSON.stringify(preset)}`);
+  const widgetsP = await adapter.callTool("get_passage", { name: "Widgets" }) as { passage: { tags: string[]; text: string } };
+  if (!widgetsP.passage.tags.includes("widget")) fail("Widgets passage must be tagged widget");
+  if (!widgetsP.passage.text.includes('<<widget "statpop">>') || !widgetsP.passage.text.includes("Dialog.open()")) fail("stat_popup body wrong");
+  // custom widget appends
+  const custom = await adapter.callTool("add_widget", { name: "greet", body: "Hello, _args[0]!" }) as { kind: string; action: string };
+  if (custom.kind !== "ok" || custom.action !== "appended") fail(`custom widget should append: ${JSON.stringify(custom)}`);
+  // idempotent replace by name
+  const custom2 = await adapter.callTool("add_widget", { name: "greet", body: "Hi, _args[0]." }) as { kind: string; action: string };
+  if (custom2.action !== "replaced") fail(`re-adding greet should replace: ${JSON.stringify(custom2)}`);
+  const widgetsP2 = await adapter.callTool("get_passage", { name: "Widgets" }) as { passage: { text: string } };
+  if ((widgetsP2.passage.text.match(/<<widget "greet">>/g) ?? []).length !== 1) fail("greet widget duplicated after replace");
+  if (!widgetsP2.passage.text.includes("Hi, _args[0].")) fail("greet not replaced with new body");
+  // non-SugarCube declines
+  await adapter.callTool("create_story", { name: "Widget H", format: "Harlowe", discard_unsaved: true });
+  await adapter.callTool("create_passage", { name: "Start", text: "Begin.", set_as_start: true, tags: [] });
+  const hDecline = await adapter.callTool("add_widget", { preset: "stat_popup" }) as { kind: string };
+  if (hDecline.kind !== "error") fail("add_widget should decline non-SugarCube formats");
+  ok(`add_widget: stat_popup preset + custom widget (append then idempotent replace) in a widget-tagged passage; non-SugarCube declines`);
 
   section("24. current_story_info before any story shows active=false");
   const info3 = await adapter.callTool("current_story_info", {}) as { active: boolean };

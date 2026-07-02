@@ -86,7 +86,9 @@
   - [x] `insert_conditional` — structured `{name,op,value}` conditions (and/or) → format-correct `<<if>>`/`(if:)[…]`/`[if]…[continue]`/`<% if(){} %>` block with optional else
   - [x] `insert_conditional_link` — state-gated link (wraps `[[...]]`; stays a real graph edge; optional else line)
   - [x] cross-format smoke 23g (all 4 dialects) green; undeclared-var guard; registry 24 tools
-- [ ] **F-WIDGETS** Widget + popup authoring (stat-change popups; reusable mutate-and-notify widgets) 🔒 builds on F-VAR-MATH
+- [~] **F-WIDGETS** Widget + popup authoring — **built on `012-variable-logic`, pending PR**
+  - [x] `add_widget({name, body})` — reusable SugarCube widget in a `widget`-tagged passage; idempotent per name
+  - [x] `preset: "stat_popup"` — ready-made `<<statpop 'name' delta>>` mutate-and-popup (core Dialog); non-SugarCube declines with guidance; smoke 23i; registry 26 tools
 - [ ] **F-VAR-INIT** Init-passage placement + variable manifest (declare into StoryInit/`startup`/vars-section/UserScript, not Start) 🔒 refines F-VARIABLES
 - [~] **F-LOGIC-GUIDE** Teach logic via docstrings + `twinery://guide` — **built on `012-variable-logic`, pending PR**
   - [x] "Authoring logic" section in the generated guide: format-aware capability matrix + per-format gotchas + variable-tool pointers

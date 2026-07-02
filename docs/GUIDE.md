@@ -29,6 +29,7 @@ The tool surface is deliberately small and verb-shaped (think UnityMCP / GodotMC
 - **`insert_conditional`** — Insert a format-correct conditional block into a passage — content that renders only when a variable test passes (with an optional else branch).
 - **`insert_conditional_link`** — Insert a link that only appears when a variable test passes — the state-gated choice pattern (e.g.
 - **`set_stat_block`** — Create or replace a persistent stat display shown on every passage — the HUD/sidebar.
+- **`add_widget`** — Define a reusable SugarCube widget in the `widget`-tagged Widgets passage, callable from any passage.
 - **`list_variables`** — Return every declared variable in the active story with its type, initial value, and the passages that set or read it.
 - **`delete_variable`** — Atomically remove every setter and every reader for a named variable from the active story's passage text, then drop it from the registry.
 - **`save_story`** — Persist the active story as <slug>.twee and <slug>.html into a directory, plus a sibling assets/<slug>/ drop zone.
@@ -700,6 +701,30 @@ Create or replace a persistent stat display shown on every passage — the HUD/s
 ```
 
 SugarCube writes StoryCaption; Harlowe writes a header-tagged StatBar passage.
+
+### `add_widget`
+
+Define a reusable SugarCube widget in the `widget`-tagged Widgets passage, callable from any passage. Pass a custom { name, body }, or preset:"stat_popup" to install a ready-made <<statpop 'name' delta>> widget that changes a numeric stat AND shows a popup (core SugarCube Dialog) — the "notify whenever a stat changes" pattern. SugarCube only (Harlowe uses (macro:), Chapbook/Snowman use JavaScript); idempotent per widget name.
+
+**Input**
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `name` | string | no | — |
+| `body` | string | no | — |
+| `preset` | enum(`stat_popup`) | no | — |
+
+**Example**
+
+*Install a stat-change popup widget*
+
+```json
+{
+  "preset": "stat_popup"
+}
+```
+
+Then call it in a passage: <<statpop 'cash' 100>> adds 100 to $cash and pops a dialog. Custom form: { name: "greet", body: "Hello, _args[0]!" }.
 
 ### `list_variables`
 

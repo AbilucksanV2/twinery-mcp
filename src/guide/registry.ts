@@ -23,6 +23,7 @@ import * as adjustVariable from "../server/tools/adjust_variable.js";
 import * as insertConditional from "../server/tools/insert_conditional.js";
 import * as insertConditionalLink from "../server/tools/insert_conditional_link.js";
 import * as setStatBlock from "../server/tools/set_stat_block.js";
+import * as addWidget from "../server/tools/add_widget.js";
 import * as listVariables from "../server/tools/list_variables.js";
 import * as deleteVariable from "../server/tools/delete_variable.js";
 
@@ -82,6 +83,7 @@ export const TOOL_REGISTRY: ToolMetadata[] = [
   bind("insert_conditional", insertConditional as unknown as ToolModule),
   bind("insert_conditional_link", insertConditionalLink as unknown as ToolModule),
   bind("set_stat_block", setStatBlock as unknown as ToolModule),
+  bind("add_widget", addWidget as unknown as ToolModule),
   bind("list_variables", listVariables as unknown as ToolModule),
   bind("delete_variable", deleteVariable as unknown as ToolModule),
   bind("save_story", saveStory as unknown as ToolModule),

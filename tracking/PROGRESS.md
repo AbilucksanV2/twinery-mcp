@@ -85,7 +85,10 @@
   - *Largest single blocker for guided-open-world stories. Surfaced 2026-06-29.*
 - [ ] **F-WIDGETS** Widget + popup authoring (stat-change popups; reusable mutate-and-notify widgets) 🔒 builds on F-VAR-MATH
 - [ ] **F-VAR-INIT** Init-passage placement + variable manifest (declare into StoryInit/`startup`/vars-section/UserScript, not Start) 🔒 refines F-VARIABLES
-- [ ] **F-LOGIC-GUIDE** Teach logic via docstrings + `twinery://guide` (format-aware capability matrix; elicitation) — *directly answers "the MCP must make any model aware of the logic"*
+- [~] **F-LOGIC-GUIDE** Teach logic via docstrings + `twinery://guide` — **built on `012-variable-logic`, pending PR**
+  - [x] "Authoring logic" section in the generated guide: format-aware capability matrix + per-format gotchas + variable-tool pointers
+  - [x] variable-tool docstrings state format-correctness / expression mode
+  - [ ] format-aware *elicitation* deferred to F-ELICIT (structured guide covers it for now)
 - [ ] **F-STATBLOCK** Central stat-display tool (`StoryCaption` / header-footer)
 - [ ] **F-INVENTORY** Inventory system (add/remove/has_item, list_inventory, inventory-gated links) 🔒 builds on F-VARIABLES
 - [ ] **F-STYLESHEETS** Rich stylesheet authoring (set/append stylesheet, per-tag style helpers)

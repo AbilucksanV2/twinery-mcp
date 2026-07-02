@@ -17,6 +17,8 @@ export function buildGuide(): string {
   parts.push("");
   parts.push(imageSection());
   parts.push("");
+  parts.push(logicSection());
+  parts.push("");
   parts.push("## Tools");
   parts.push("");
   for (const tool of TOOL_REGISTRY) {
@@ -75,6 +77,42 @@ function imageSection(): string {
     "- **Missing-file behaviour**: the compiled HTML shows a labeled dashed-border box instead of a broken-image icon. Nothing else to wire up — the fallback is inline CSS + an `onerror` hook.",
     "",
     "Labels must be unique within the story. On collision, the server surfaces a clarification offering an auto-suffix; it will never silently rename.",
+  ].join("\n");
+}
+
+function logicSection(): string {
+  return [
+    "## Authoring logic (variables & conditions)",
+    "",
+    "**Logic in Twine lives inside passage text**, written as the active story format's own markup — there is no separate logic layer. The *concept* (a stat, a computed change, a gated choice) is the same across formats; the **syntax is not**. Always emit markup for the story's declared format — mixing dialects (e.g. Harlowe `(set:)` in a SugarCube story) is the most common way to produce a broken story.",
+    "",
+    "**Variables have dedicated tools** — prefer them over hand-writing setters/readers:",
+    "",
+    "- `declare_variable` — introduce a variable and its initial value.",
+    "- `set_variable` — set an absolute value in a passage (`expression: true` to emit a computed value unquoted).",
+    "- `adjust_variable` — change a numeric variable by a relative amount (e.g. `+100` cash); emits the format-correct relative setter.",
+    "- `insert_variable_reader` — show a variable's value in prose.",
+    "- `read_variable` / `list_variables` / `delete_variable` — inspect and remove.",
+    "",
+    "**Conditionals, gated links, widgets, and inventories do not yet have dedicated tools** — author them as passage text (via `create_passage` / `update_passage`) using the matrix below. Emit exactly the row for the active format.",
+    "",
+    "| Need | Harlowe | SugarCube | Chapbook | Snowman |",
+    "|---|---|---|---|---|",
+    "| Set (literal) | `(set: $x to 5)` | `<<set $x to 5>>` | `x: 5` (above `--`) | `<% s.x = 5 %>` |",
+    "| Set (computed) | `(set: $x to $x + 1)` | `<<set $x to $x + 1>>` | `x: x + 1` (above `--`) | `<% s.x = s.x + 1 %>` |",
+    "| Show value | `$x` | `<<= $x>>` | `{x}` | `<%= s.x %>` |",
+    "| If / else | `(if: $x > 1)[…](else:)[…]` | `<<if $x gt 1>>…<<else>>…<</if>>` | `[if x > 1]`…`[else]`…`[continue]` | `<% if (s.x > 1) { %>…<% } else { %>…<% } %>` |",
+    "| Gated link | `(if: $x > 1)[[[Go->T]]]` | `<<if $x gt 1>>[[Go->T]]<</if>>` | `[if x > 1]`⏎`[[Go->T]]` | `<% if (s.x > 1) { %>[[Go->T]]<% } %>` |",
+    "| Initialize once in | a passage tagged `startup` | the `StoryInit` passage | the Start passage's vars section | a `[script]` passage (`window.story.state.x = …`) |",
+    "",
+    "**Format gotchas that break stories:**",
+    "",
+    "- **Harlowe** — conditionals are *changers attached to a hook*: `(if: $x is 2)[shown]` (brackets required, no space-operator). Use **word operators** (`is`, `and`, `not`, `contains`), not `==`/`&&`. A gated link nests three brackets: `(if: c)[[[Text->Target]]]`.",
+    "- **SugarCube** — `$var` persists/saves, `_var` is temporary (wiped each render). Set with `to`, compare with `is`/`gt`/`lt`; never bare `=` in a condition. Every `<<if>>` needs `<</if>>`. `<<notify>>` toasts are a *third-party* macro — don't emit without the add-on.",
+    "- **Chapbook** — state goes in the **vars section above the `--` line** (bare names, no `$`); conditionals are line `[if]`/`[else]`/`[continue]` modifiers (no nesting, no `else if`). There is no setter-on-link — set state in the destination passage's vars section.",
+    "- **Snowman** — raw JavaScript in `<% %>` / `<%= %>`; state on `s.` (alias of `window.story.state`, available only inside template tags). Standard JS operators. No macros, no built-in dialog.",
+    "",
+    "General: initialize every variable before it's read; keep a single central place to display current stats (SugarCube `StoryCaption`; other formats a `header`/`footer`-tagged passage); the in-game clock is a plain variable you advance, not the real-world clock.",
   ].join("\n");
 }
 

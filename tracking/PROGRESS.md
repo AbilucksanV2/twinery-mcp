@@ -27,9 +27,9 @@
 | Core authoring (passages, links, graph integrity, save/load) | ✅ shipped |
 | Session persistence + dirty guard | ✅ shipped |
 | HTTP transport mode + CI + all-format fixtures | ✅ shipped |
-| **Variables (declare/read/set/list/delete + readers)** | ✅ built, ⏳ pending PR merge |
-| **Computed stats + conditionals + logic guide** | ✅ built on `012-variable-logic`, ⏳ pending PR |
-| Stat HUD · widgets/popups · inventory · init-passage placement | ❌ backlog (F-STATBLOCK, F-WIDGETS, F-INVENTORY, F-VAR-INIT) |
+| **Variables (declare/read/set/list/delete + readers)** | ✅ built, ⏳ pending PR merge (`011-variables`) |
+| **Computed stats · conditionals · logic guide · stat HUD · widgets/popups · inventory** | ✅ built on `012-variable-logic`, ⏳ pending PR (28 tools) |
+| Init-passage placement (F-VAR-INIT) | ❌ last E07 feature — not started |
 | Stylesheets | ❌ backlog |
 
 ---

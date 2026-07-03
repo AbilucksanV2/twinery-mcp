@@ -29,7 +29,7 @@ export const example = {
 
 const conditionSchema = z.object({
   name: z.string().min(1),
-  op: z.enum(["eq", "ne", "gt", "gte", "lt", "lte", "truthy", "falsy"]),
+  op: z.enum(["eq", "ne", "gt", "gte", "lt", "lte", "truthy", "falsy", "has", "lacks"]),
   value: z.union([z.string(), z.number(), z.boolean()]).optional(),
 });
 
@@ -52,7 +52,11 @@ export function checkConditions(conditions: Condition[]): { kind: "error"; messa
     if (c.op !== "truthy" && c.op !== "falsy" && c.value === undefined) {
       return { kind: "error", message: `Condition on "${c.name}" uses op "${c.op}" but has no value.` };
     }
-    if (getVariableByName(c.name) === undefined) undeclared.push(c.name);
+    // has/lacks target a collection (inventory array) that lives outside the
+    // scalar variable registry, so don't require a scalar declaration for them.
+    if (c.op !== "has" && c.op !== "lacks" && getVariableByName(c.name) === undefined) {
+      undeclared.push(c.name);
+    }
   }
   if (undeclared.length > 0) {
     return {

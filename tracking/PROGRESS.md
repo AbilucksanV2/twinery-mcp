@@ -96,7 +96,11 @@
   - [ ] format-aware *elicitation* deferred to F-ELICIT (structured guide covers it for now)
 - [~] **F-STATBLOCK** Central stat-display tool — **built on `012-variable-logic`, pending PR**
   - [x] `set_stat_block(variables[], title?, separator?)` — SugarCube `StoryCaption` sidebar + Harlowe `header`-tagged `StatBar`; declarative/idempotent; declines Chapbook/Snowman (no native header); smoke 23h; registry 25 tools
-- [ ] **F-INVENTORY** Inventory system (add/remove/has_item, list_inventory, inventory-gated links) 🔒 builds on F-VARIABLES
+- [~] **F-INVENTORY** Inventory system — **built on `012-variable-logic`, pending PR**
+  - [x] `add_item` / `remove_item` — array push/remove per format (SugarCube/Harlowe/Snowman); auto-inits the array once in Start
+  - [x] inventory-gated links via new `has`/`lacks` condition ops on `insert_conditional_link`
+  - [x] Chapbook declines (array mutation needs raw JS); smoke 23j; registry 28 tools
+  - *Note: `list_inventory` not built — array contents are runtime; `list_variables` shows scalars. Dress/drink cases already covered by set_variable/adjust_variable.*
 - [ ] **F-STYLESHEETS** Rich stylesheet authoring (set/append stylesheet, per-tag style helpers)
 
 > 📄 **Logic research reference:** [`specs/011-variables/research.md` § R8](../specs/011-variables/research.md) — cross-format syntax matrix, per-format gotchas, common patterns, and MCP design implications. Feeds every E07 logic feature.

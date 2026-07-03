@@ -154,9 +154,9 @@ async function createAdapter(): Promise<SmokeAdapter> {
 async function runSmoke(adapter: SmokeAdapter): Promise<void> {
   console.log(`Twinery MCP POC smoke test (transport=${adapter.mode})\n==========================`);
 
-  // Pre-flight for HTTP: verify the listTools wire format returns all 26 tools.
+  // Pre-flight for HTTP: verify the listTools wire format returns all 28 tools.
   if (adapter.mode === "http" && adapter.listToolNames !== undefined) {
-    section("0. tools/list over HTTP returns all 26 tools");
+    section("0. tools/list over HTTP returns all 28 tools");
     const names = await adapter.listToolNames();
     const expected = TOOL_REGISTRY.map((t) => t.name).sort();
     const got = [...names].sort();
@@ -764,6 +764,45 @@ async function runSmoke(adapter: SmokeAdapter): Promise<void> {
   const hDecline = await adapter.callTool("add_widget", { preset: "stat_popup" }) as { kind: string };
   if (hDecline.kind !== "error") fail("add_widget should decline non-SugarCube formats");
   ok(`add_widget: stat_popup preset + custom widget (append then idempotent replace) in a widget-tagged passage; non-SugarCube declines`);
+
+  section("23j. variables F-INVENTORY — add/remove item + has-gating (SugarCube; Chapbook declines)");
+  await adapter.callTool("create_story", { name: "Inv SC", format: "SugarCube", discard_unsaved: true });
+  await adapter.callTool("create_passage", { name: "Start", text: "Begin.\n[[Go->Vault]]", set_as_start: true, tags: [] });
+  await adapter.callTool("create_passage", { name: "Vault", text: "A dusty vault.\n[[Leave->Start]]", tags: [] });
+  await adapter.callTool("create_passage", { name: "Door", text: "A locked door.\n[[Back->Start]]", tags: [] });
+  await adapter.callTool("create_passage", { name: "Unlocked", text: "It opens.", tags: [] });
+
+  const addI = await adapter.callTool("add_item", { passage_name: "Vault", item: "brass key" }) as { kind: string; emitted_block: string; inventory: string };
+  if (addI.kind !== "ok" || !addI.emitted_block.includes('<<run $inventory.push("brass key")>>')) fail(`add_item wrong: ${JSON.stringify(addI)}`);
+  // auto-init landed in Start, exactly once even after a second add
+  await adapter.callTool("add_item", { passage_name: "Vault", item: "torch" });
+  const invStart = await adapter.callTool("get_passage", { name: "Start" }) as { passage: { text: string } };
+  if ((invStart.passage.text.match(/<<set \$inventory to \[\]>>/g) ?? []).length !== 1) fail(`inventory should auto-init exactly once in Start: ${invStart.passage.text}`);
+
+  // gate a link on inventory possession via the has op
+  const gate = await adapter.callTool("insert_conditional_link", {
+    passage_name: "Door",
+    conditions: [{ name: "inventory", op: "has", value: "brass key" }],
+    to_passage: "Unlocked",
+    display_text: "Unlock with the key",
+  }) as { kind: string; emitted_block: string };
+  if (gate.kind !== "ok" || !gate.emitted_block.includes('<<if $inventory.includes("brass key")>>')) fail(`has-gate wrong: ${JSON.stringify(gate)}`);
+
+  const rmI = await adapter.callTool("remove_item", { passage_name: "Unlocked", item: "brass key" }) as { kind: string; emitted_block: string };
+  if (rmI.kind !== "ok" || !rmI.emitted_block.includes('<<run $inventory.delete("brass key")>>')) fail(`remove_item wrong: ${JSON.stringify(rmI)}`);
+
+  // Harlowe array syntax
+  await adapter.callTool("create_story", { name: "Inv H", format: "Harlowe", discard_unsaved: true });
+  await adapter.callTool("create_passage", { name: "Start", text: "Begin.", set_as_start: true, tags: [] });
+  const addH = await adapter.callTool("add_item", { passage_name: "Start", item: "map" }) as { kind: string; emitted_block: string };
+  if (addH.kind !== "ok" || !addH.emitted_block.includes("(set: $inventory to it + (a: \"map\"))")) fail(`Harlowe add_item wrong: ${JSON.stringify(addH)}`);
+
+  // Chapbook declines
+  await adapter.callTool("create_story", { name: "Inv C", format: "Chapbook", discard_unsaved: true });
+  await adapter.callTool("create_passage", { name: "Start", text: "Begin.", set_as_start: true, tags: [] });
+  const addC = await adapter.callTool("add_item", { passage_name: "Start", item: "coin" }) as { kind: string };
+  if (addC.kind !== "error") fail("Chapbook add_item should decline");
+  ok(`add_item/remove_item emit array ops (SugarCube push/delete, Harlowe (a:) +/-), auto-init once; inventory gates links via has op; Chapbook declines`);
 
   section("24. current_story_info before any story shows active=false");
   const info3 = await adapter.callTool("current_story_info", {}) as { active: boolean };

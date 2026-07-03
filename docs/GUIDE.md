@@ -30,6 +30,8 @@ The tool surface is deliberately small and verb-shaped (think UnityMCP / GodotMC
 - **`insert_conditional_link`** — Insert a link that only appears when a variable test passes — the state-gated choice pattern (e.g.
 - **`set_stat_block`** — Create or replace a persistent stat display shown on every passage — the HUD/sidebar.
 - **`add_widget`** — Define a reusable SugarCube widget in the `widget`-tagged Widgets passage, callable from any passage.
+- **`add_item`** — Add an item to an inventory (an array-of-item-names variable) inside a passage — e.g.
+- **`remove_item`** — Remove an item from an inventory array inside a passage — e.g.
 - **`list_variables`** — Return every declared variable in the active story with its type, initial value, and the passages that set or read it.
 - **`delete_variable`** — Atomically remove every setter and every reader for a named variable from the active story's passage text, then drop it from the registry.
 - **`save_story`** — Persist the active story as <slug>.twee and <slug>.html into a directory, plus a sibling assets/<slug>/ drop zone.
@@ -725,6 +727,64 @@ Define a reusable SugarCube widget in the `widget`-tagged Widgets passage, calla
 ```
 
 Then call it in a passage: <<statpop 'cash' 100>> adds 100 to $cash and pops a dialog. Custom form: { name: "greet", body: "Hello, _args[0]!" }.
+
+### `add_item`
+
+Add an item to an inventory (an array-of-item-names variable) inside a passage — e.g. picking up a key. Auto-initialises the inventory to an empty array in the Start passage on first use. Emits the format-correct array push (SugarCube <<run $inv.push('key')>>, Harlowe (set: $inv to it + (a: 'key')), Snowman <% s.inv.push('key') %>). Gate links on inventory with insert_conditional_link using op "has"/"lacks". SugarCube/Harlowe/Snowman only (Chapbook mutates arrays via raw JS).
+
+**Input**
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `passage_name` | string | yes | — |
+| `item` | string | yes | — |
+| `inventory_name` | string | no | — |
+| `offset` | number | no | — |
+
+**Surfaces a clarification when:**
+
+- passage_name does not exist: ask which passage was meant.
+
+**Example**
+
+*Pick up the brass key*
+
+```json
+{
+  "passage_name": "Vault",
+  "item": "brass key"
+}
+```
+
+Then gate a door: insert_conditional_link({ passage_name: "Door", conditions: [{name:"inventory", op:"has", value:"brass key"}], to_passage: "Unlocked" }).
+
+### `remove_item`
+
+Remove an item from an inventory array inside a passage — e.g. using a key. Emits the format-correct array removal (SugarCube <<run $inv.delete('key')>>, Harlowe (set: $inv to it - (a: 'key')), Snowman <% s.inv = _.without(s.inv, 'key') %>). SugarCube/Harlowe/Snowman only.
+
+**Input**
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `passage_name` | string | yes | — |
+| `item` | string | yes | — |
+| `inventory_name` | string | no | — |
+| `offset` | number | no | — |
+
+**Surfaces a clarification when:**
+
+- passage_name does not exist: ask which passage was meant.
+
+**Example**
+
+*Consume the key when the door opens*
+
+```json
+{
+  "passage_name": "Unlocked",
+  "item": "brass key"
+}
+```
 
 ### `list_variables`
 

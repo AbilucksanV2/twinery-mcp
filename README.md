@@ -18,7 +18,7 @@ multi-format story testing, automated tests, CI, MCP elicitation) see
 
 ## What's in v0.4
 
-**26 MCP tools**:
+**28 MCP tools**:
 
 | Tool | Purpose |
 |------|---------|
@@ -44,6 +44,8 @@ multi-format story testing, automated tests, CI, MCP elicitation) see
 | `insert_conditional_link` | Insert a link that only appears when a condition passes (the state-gated choice — e.g. the exam-pass option). Wraps a `[[...]]` in the format's conditional; the link stays a real graph edge. Optional `else_text` for a visible-but-inert line. |
 | `set_stat_block` | Create/replace a persistent stat HUD shown on every passage — SugarCube `StoryCaption` (sidebar) or Harlowe `header`-tagged passage. Declarative and idempotent. (Chapbook/Snowman have no native header — the tool declines them.) |
 | `add_widget` | Define a reusable SugarCube widget in the `widget`-tagged Widgets passage. Custom `{name, body}`, or `preset: "stat_popup"` for a ready-made `<<statpop 'name' delta>>` that changes a stat *and* pops a dialog. Idempotent per name. (SugarCube only.) |
+| `add_item` | Add an item to an inventory (array-of-item-names variable) in a passage; auto-initialises the array on first use. Emits the format-correct array push. Gate links on possession with `insert_conditional_link` op `has`/`lacks`. (SugarCube/Harlowe/Snowman.) |
+| `remove_item` | Remove an item from an inventory array in a passage — the format-correct array removal. (SugarCube/Harlowe/Snowman.) |
 | `list_variables` | Read-only registry view — every variable with its type, initial value, and the passages that set or read it. |
 | `delete_variable` | Atomically strip every setter and reader for a variable from passage text, then drop it from the registry. Honors the unsaved-changes guard. |
 | `save_story` | Write `<slug>.twee` and `<slug>.html` into a folder, plus a sibling `assets/<slug>/` drop zone. Defaults `output_dir` to the active story's last-saved (or last-loaded) path; asks only when nothing is remembered. Reports any image placeholder whose file is still missing. |

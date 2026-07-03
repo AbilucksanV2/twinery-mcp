@@ -248,7 +248,7 @@ export function insertExpressionSetterIntoText(
 // condition model rendered into each format's dialect.
 // ---------------------------------------------------------------------------
 
-export type ConditionOp = "eq" | "ne" | "gt" | "gte" | "lt" | "lte" | "truthy" | "falsy";
+export type ConditionOp = "eq" | "ne" | "gt" | "gte" | "lt" | "lte" | "truthy" | "falsy" | "has" | "lacks";
 
 export interface Condition {
   name: string;
@@ -284,6 +284,14 @@ function renderOneCondition(format: StoryFormat, c: Condition): string {
   const ref = variableRef(format, c.name);
   if (c.op === "truthy") return ref;
   if (c.op === "falsy") return isJsFormat(format) ? `!${ref}` : `not ${ref}`;
+  if (c.op === "has" || c.op === "lacks") {
+    // Array/collection membership — used for inventory gating.
+    const item = renderConditionValue(c.value!);
+    const test = format === "Harlowe" ? `${ref} contains ${item}` : `${ref}.includes(${item})`;
+    if (c.op === "has") return test;
+    if (format === "Harlowe") return `not (${ref} contains ${item})`;
+    return isJsFormat(format) ? `!${ref}.includes(${item})` : `not ${ref}.includes(${item})`;
+  }
   return `${ref} ${comparisonOperator(format, c.op)} ${renderConditionValue(c.value!)}`;
 }
 
@@ -328,6 +336,62 @@ export function emitConditionalBlock(
       return hasElse
         ? `<% if (${condition}) { %>\n${thenText}\n<% } else { %>\n${elseText}\n<% } %>\n`
         : `<% if (${condition}) { %>\n${thenText}\n<% } %>\n`;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Inventory (F-INVENTORY) — array-of-item-names collections. Clean array ops in
+// SugarCube / Harlowe / Snowman; Chapbook mutates arrays only via raw JS, so
+// the inventory tools decline it.
+// ---------------------------------------------------------------------------
+
+export function supportsInventory(format: StoryFormat): boolean {
+  return format !== "Chapbook";
+}
+
+function quoteItem(item: string): string {
+  return `"${item.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
+}
+
+/** Empty-array initializer setter for an inventory variable (trailing newline). */
+export function emitInventoryInit(format: StoryFormat, name: string): string {
+  switch (format) {
+    case "SugarCube":
+      return `<<set $${name} to []>>\n`;
+    case "Harlowe":
+      return `(set: $${name} to (a:))\n`;
+    case "Snowman":
+      return `<% s.${name} = [] %>\n`;
+    case "Chapbook":
+      return `${name}: []\n`;
+  }
+}
+
+export function emitInventoryAdd(format: StoryFormat, name: string, item: string): string {
+  const q = quoteItem(item);
+  switch (format) {
+    case "SugarCube":
+      return `<<run $${name}.push(${q})>>\n`;
+    case "Harlowe":
+      return `(set: $${name} to it + (a: ${q}))\n`;
+    case "Snowman":
+      return `<% s.${name}.push(${q}) %>\n`;
+    case "Chapbook":
+      return `${name}: ${name}\n`; // unreachable — inventory tools decline Chapbook
+  }
+}
+
+export function emitInventoryRemove(format: StoryFormat, name: string, item: string): string {
+  const q = quoteItem(item);
+  switch (format) {
+    case "SugarCube":
+      return `<<run $${name}.delete(${q})>>\n`;
+    case "Harlowe":
+      return `(set: $${name} to it - (a: ${q}))\n`;
+    case "Snowman":
+      return `<% s.${name} = _.without(s.${name}, ${q}) %>\n`;
+    case "Chapbook":
+      return `${name}: ${name}\n`; // unreachable
   }
 }
 

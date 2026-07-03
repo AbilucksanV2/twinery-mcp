@@ -35,7 +35,7 @@ export const example = {
 
 const conditionSchema = z.object({
   name: z.string().min(1),
-  op: z.enum(["eq", "ne", "gt", "gte", "lt", "lte", "truthy", "falsy"]),
+  op: z.enum(["eq", "ne", "gt", "gte", "lt", "lte", "truthy", "falsy", "has", "lacks"]),
   value: z.union([z.string(), z.number(), z.boolean()]).optional(),
 });
 
